@@ -18,6 +18,6 @@ func TestLogStdOutLine_toJSONstr(t *testing.T) {
 		XreqID:        "123",
 	}
 
-	expected := `{"remote_address":"127.0.0.1","method":"GET","url":"http://example.com","status_code":200,"content_length":13,"duration_ms":100,"content_type":"text/plain","x_request_id":"123"}`
+	expected := `{"client_address":"127.0.0.1","method":"GET","url":"http://example.com","status_code":200,"content_length":13,"duration_ms":100,"content_type":"text/plain","x_request_id":"123"}`
 	assert.Equal(t, expected, line.toJSONstr())
 }

@@ -2,31 +2,14 @@ package addons
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"unicode"
 
 	"github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
-)
 
-// LogLevel is an enum for the logging style of the dumper
-type LogLevel int
-
-const (
-	// logs only request headers
-	WRITE_REQ_HEADERS_ONLY LogLevel = iota
-
-	// logs both request and response bodies, this is the most common use case
-	WRITE_REQ_BODY_AND_RESP_BODY
-
-	// logs request headers, response headers, and response body
-	WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY
-
-	// logs request headers, request body, response headers, and response body
-	WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY
+	md "github.com/robbyt/llm_proxy/addons/megadumper"
 )
 
 type MegaDumper struct {
@@ -34,23 +17,19 @@ type MegaDumper struct {
 	singleLogFileTarget io.Writer
 	logFilename         string
 	logTarget           string
-	logLevel            LogLevel
+	logLevel            md.LogLevel
+	logFormat           md.LogFormat
 }
 
-type requestLogDump struct {
-	RequestHeaders  string `json:"request_headers,omitempty"`
-	RequestBody     string `json:"request_body,omitempty"`
-	ResponseHeaders string `json:"response_headers,omitempty"`
-	ResponseBody    string `json:"response_body,omitempty"`
-}
-
-// toJSONBytes converts the requestLogDump struct to a byte array, omitting fields that are empty
-func (d *requestLogDump) toJSONBytes() ([]byte, error) {
-	j, err := json.MarshalIndent(d, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal requestLogDump to JSON: %w", err)
+func (d *MegaDumper) logExtension() string {
+	switch d.logFormat {
+	case md.LogFormat_JSON:
+		return "json"
+	case md.LogFormat_PLAINTEXT:
+		return "log"
+	default:
+		return ""
 	}
-	return j, nil
 }
 
 func (d *MegaDumper) Requestheaders(f *proxy.Flow) {
@@ -65,14 +44,14 @@ func (d MegaDumper) Write(f *proxy.Flow) error {
 	if err != nil {
 		return err
 	}
-	bytesToWrite, err := logDump.toJSONBytes()
+	bytesToWrite, err := logDump.DumpToJSONBytes()
 	if err != nil {
 		return err
 	}
 
 	if d.logTarget != "" {
 		// multiple log file mode enabled, will create a new singleLogFileTarget for each request
-		d.logFilename = fmt.Sprintf("%s/%s.json", d.logTarget, f.Id)
+		d.logFilename = fmt.Sprintf("%s/%s.%s", d.logTarget, f.Id, d.logExtension())
 
 		// check if the file exists
 		_, err := os.Stat(d.logFilename)
@@ -80,7 +59,7 @@ func (d MegaDumper) Write(f *proxy.Flow) error {
 			log.Warnf("log file already exists, appending: %v", d.logFilename)
 		}
 
-		d.singleLogFileTarget, err = newFile(d.logFilename)
+		d.singleLogFileTarget, err = md.NewFile(d.logFilename)
 		if err != nil {
 			return err
 		}
@@ -100,12 +79,12 @@ func (d MegaDumper) diskWriter(bytes []byte) error {
 }
 
 // prepJSONobj is a blocking call, run by .Write after <-f.Done() (alternative to prepDumpBytes)
-func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*requestLogDump, error) {
-	req := &requestLogDump{}
+func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*md.LogDumpDiskContainer, error) {
+	req := &md.LogDumpDiskContainer{}
 
 	// request headers
 	switch d.logLevel {
-	case WRITE_REQ_HEADERS_ONLY, WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY:
+	case md.WRITE_REQ_HEADERS_ONLY, md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY:
 		log.Debug("Dumping request headers")
 		if f.Request != nil {
 			buf := new(bytes.Buffer)
@@ -121,10 +100,11 @@ func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*requestLogDump, error) {
 
 	// request body
 	switch d.logLevel {
-	case WRITE_REQ_BODY_AND_RESP_BODY, WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
+	case md.WRITE_REQ_BODY_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
 		log.Debug("Dumping request body")
 		if f.Request != nil {
-			if f.Request != nil && len(f.Request.Body) > 0 && canPrint(f.Request.Body) {
+			// TODO: CanPrint converts to a string, so no need to do it twice
+			if f.Request != nil && len(f.Request.Body) > 0 && md.CanPrint(f.Request.Body) {
 				req.RequestBody = string(f.Request.Body)
 			}
 		} else {
@@ -134,7 +114,7 @@ func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*requestLogDump, error) {
 
 	// response headers
 	switch d.logLevel {
-	case WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
+	case md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
 		log.Debug("Dumping response headers")
 		if f.Response != nil {
 			buf := new(bytes.Buffer)
@@ -151,7 +131,7 @@ func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*requestLogDump, error) {
 
 	// response body
 	switch d.logLevel {
-	case WRITE_REQ_BODY_AND_RESP_BODY, WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
+	case md.WRITE_REQ_BODY_AND_RESP_BODY, md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
 		log.Debug("Dumping response body")
 		if f.Response.Body != nil && len(f.Response.Body) > 0 && f.Response.IsTextContentType() {
 			body, err := f.Response.DecodedBody()
@@ -171,7 +151,7 @@ func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*bytes.Buffer, error) {
 
 	// request headers
 	switch d.logLevel {
-	case WRITE_REQ_HEADERS_ONLY, WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY:
+	case md.WRITE_REQ_HEADERS_ONLY, md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY:
 		log.Debug("Dumping request headers")
 		if f.Request != nil {
 			err := f.Request.Header.WriteSubset(buf, nil) // writing response headers
@@ -187,10 +167,10 @@ func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*bytes.Buffer, error) {
 
 	// request body
 	switch d.logLevel {
-	case WRITE_REQ_BODY_AND_RESP_BODY, WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
+	case md.WRITE_REQ_BODY_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
 		log.Debug("Dumping request body")
 		if f.Request != nil {
-			if f.Request != nil && len(f.Request.Body) > 0 && canPrint(f.Request.Body) {
+			if f.Request != nil && len(f.Request.Body) > 0 && md.CanPrint(f.Request.Body) {
 				_, err := buf.Write(f.Request.Body)
 				if err != nil {
 					log.Error(err)
@@ -205,7 +185,7 @@ func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*bytes.Buffer, error) {
 
 	// response headers
 	switch d.logLevel {
-	case WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
+	case md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
 		log.Debug("Dumping response headers")
 		if f.Response != nil {
 			err := f.Response.Header.WriteSubset(buf, nil) // writing response headers
@@ -220,7 +200,7 @@ func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*bytes.Buffer, error) {
 
 	// response body
 	switch d.logLevel {
-	case WRITE_REQ_BODY_AND_RESP_BODY, WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
+	case md.WRITE_REQ_BODY_AND_RESP_BODY, md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
 		log.Debug("Dumping response body")
 		if f.Response.Body != nil && len(f.Response.Body) > 0 && f.Response.IsTextContentType() {
 			body, err := f.Response.DecodedBody()
@@ -235,30 +215,14 @@ func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func canPrint(content []byte) bool {
-	for _, c := range string(content) {
-		if !unicode.IsPrint(c) && !unicode.IsSpace(c) {
-			return false
-		}
-	}
-	return true
-}
-
-func newFile(fileName string) (*os.File, error) {
-	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file %v: %w", fileName, err)
-	}
-	return file, nil
-}
-
-func newDumper(out io.Writer, lvl LogLevel) *MegaDumper {
+// newDumper is an abstract factory for creating a MegaDumper, configured for logging to a single file
+func newDumper(out io.Writer, lvl md.LogLevel) *MegaDumper {
 	return &MegaDumper{singleLogFileTarget: out, logLevel: lvl}
 }
 
-// NewDumperWithFilename creates a dumper that writes all logs to a single file
-func NewDumperWithFilename(filename string, lvl LogLevel) (*MegaDumper, error) {
-	out, err := newFile(filename)
+// NewDumperWithFilename creates a dumper, and a single file, and writes all logs to that one file
+func NewDumperWithFilename(filename string, lvl md.LogLevel) (*MegaDumper, error) {
+	out, err := md.NewFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +230,7 @@ func NewDumperWithFilename(filename string, lvl LogLevel) (*MegaDumper, error) {
 }
 
 // NewDumperWithLogRoot creates a new dumper that creates a new log file for each request
-func NewDumperWithLogRoot(logRoot string, lvl LogLevel) (*MegaDumper, error) {
+func NewDumperWithLogRoot(logRoot string, lvl md.LogLevel, logFormat md.LogFormat) (*MegaDumper, error) {
 	// Check if the log directory exists
 	_, err := os.Stat(logRoot)
 	if err != nil {
@@ -283,5 +247,9 @@ func NewDumperWithLogRoot(logRoot string, lvl LogLevel) (*MegaDumper, error) {
 		}
 	}
 
-	return &MegaDumper{logLevel: lvl, logTarget: logRoot}, nil
+	return &MegaDumper{
+		logLevel:  lvl,
+		logTarget: logRoot,
+		logFormat: logFormat,
+	}, nil
 }

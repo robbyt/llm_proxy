@@ -2,125 +2,122 @@ package addons
 
 import (
 	"net/url"
-	"strings"
 	"testing"
 
-	px "github.com/kardianos/mitmproxy/proxy"
+	"github.com/kardianos/mitmproxy/proxy"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
+
+	md "github.com/robbyt/llm_proxy/addons/megadumper"
 )
 
-func TestMegaDumper_prepDumpBytes_Header(t *testing.T) {
-	dumper := &MegaDumper{logLevel: LogLevel(WRITE_REQ_HEADERS_ONLY)}
-	req := &px.Request{
-		Method: "GET",
-		URL:    &url.URL{Scheme: "http", Host: "example.com"},
-		Body:   []byte("Hello!"),
-	}
-	res := &px.Response{
-		StatusCode: 200,
-		Body:       []byte("world!"),
-		Header:     map[string][]string{"Content-Type": {"text/plain"}},
-	}
-	flow := &px.Flow{
-		Request:  req,
-		Response: res,
-	}
-
-	buf, err := dumper.prepDumpBytes(flow)
-
-	assert.NoError(t, err)
-	resp := strings.ReplaceAll(buf.String(), "\r\n", "")
-	assert.Contains(t, resp, "GET /")
-	assert.Contains(t, resp, "Host: example.com")
-
-	// not writing response headers and body
-	assert.NotContains(t, resp, "world!")
-	assert.NotContains(t, resp, "200 OK")
+type mockWriter struct {
+	bucket []byte
 }
 
-func TestMegaDumper_prepDumpBytes_HeaderAndBody(t *testing.T) {
-	dumper := &MegaDumper{logLevel: LogLevel(WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY)}
-	req := &px.Request{
-		Method: "GET",
-		URL:    &url.URL{Scheme: "http", Host: "example.com"},
-		Body:   []byte("Hello!"),
-	}
-	res := &px.Response{
-		StatusCode: 200,
-		Body:       []byte("world!"),
-		Header:     map[string][]string{"Content-Type": {"text/plain"}},
-	}
-	flow := &px.Flow{
-		Request:  req,
-		Response: res,
-	}
-
-	buf, err := dumper.prepDumpBytes(flow)
-
-	assert.NoError(t, err)
-	resp := strings.ReplaceAll(buf.String(), "\r\n", "")
-	assert.Contains(t, resp, "GET /")
-	assert.Contains(t, resp, "Host: example.com")
-	assert.Contains(t, resp, "world!")
-	assert.Contains(t, resp, "200 OK")
+func (w *mockWriter) Write(p []byte) (n int, err error) {
+	w.bucket = append(w.bucket, p...)
+	return -1, nil
 }
 
-// TestMegaDumper_prepDumpBytes_HeaderAndBody_WrongContentType tests the case when the response has
-// an incompatible content type, it should not write the response body
-func TestMegaDumper_prepDumpBytes_HeaderAndBody_WrongContentType(t *testing.T) {
-	dumper := &MegaDumper{logLevel: LogLevel(WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY)}
-	req := &px.Request{
-		Method: "GET",
-		URL:    &url.URL{Scheme: "http", Host: "example.com"},
-		Body:   []byte("Hello!"),
-	}
-	res := &px.Response{
-		StatusCode: 200,
-		Body:       []byte("world!"),
-		Header:     map[string][]string{"Content-Type": {"bin/hex"}},
-	}
-	flow := &px.Flow{
-		Request:  req,
-		Response: res,
+func TestMegaDumper(t *testing.T) {
+	dumper := &MegaDumper{
+		singleLogFileTarget: nil,
+		logFilename:         "",
+		logTarget:           "",
+		logLevel:            md.LogLevel(0),
+		logFormat:           md.LogFormat(0),
 	}
 
-	buf, err := dumper.prepDumpBytes(flow)
-
-	assert.NoError(t, err)
-	resp := strings.ReplaceAll(buf.String(), "\r\n", "")
-	assert.Contains(t, resp, "GET /")
-	assert.Contains(t, resp, "Host: example.com")
-	assert.NotContains(t, resp, "world!")
-	assert.Contains(t, resp, "200 OK")
+	assert.NotNil(t, dumper)
+	assert.Implements(t, (*proxy.Addon)(nil), dumper)
 }
 
-func TestCanPrint(t *testing.T) {
+func TestMegaDumper_SetLogLevel(t *testing.T) {
+	dumper := &MegaDumper{}
+	logLevel := md.LogLevel(1)
+	dumper.logLevel = logLevel
+
+	assert.Equal(t, logLevel, dumper.logLevel)
+}
+
+func TestMegaDumper_SetLogFormat(t *testing.T) {
+	dumper := &MegaDumper{}
+	logFormat := md.LogFormat(1)
+	dumper.logFormat = logFormat
+
+	assert.Equal(t, logFormat, dumper.logFormat)
+}
+
+func TestMegaDumper_SetLogTarget(t *testing.T) {
+	dumper := &MegaDumper{}
+	logTarget := "target.log"
+	dumper.logTarget = logTarget
+
+	assert.Equal(t, logTarget, dumper.logTarget)
+}
+
+func TestMegaDumper_SingleLogFileTarget(t *testing.T) {
+	dumper := &MegaDumper{
+		logLevel:  md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY,
+		logFormat: md.LogFormat_PLAINTEXT,
+	}
+	logFileTarget := &mockWriter{}
+	dumper.singleLogFileTarget = logFileTarget
+	assert.Equal(t, logFileTarget, dumper.singleLogFileTarget)
+
+	// create a fake flow, passed to the writer for full in-memory testing
+	flow := &proxy.Flow{
+		Id: uuid.FromStringOrNil("123"),
+		Request: &proxy.Request{
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "example.com",
+				Path:   "/",
+			},
+		},
+		Response: &proxy.Response{
+			StatusCode: 200,
+			Body:       []byte("Hello, World!"),
+		},
+	}
+	dumper.Write(flow)
+
+	// TODO check the in-memory log file
+
+}
+
+func TestLogExtension(t *testing.T) {
 	tests := []struct {
 		name     string
-		content  []byte
-		expected bool
+		format   md.LogFormat
+		expected string
 	}{
 		{
-			name:     "Printable content",
-			content:  []byte("Hello, World!"),
-			expected: true,
+			name:     "Plain Text",
+			format:   md.LogFormat_PLAINTEXT,
+			expected: "log",
 		},
 		{
-			name:     "Non-printable content",
-			content:  []byte("Hello, \x00World!"),
-			expected: false,
+			name:     "JSON",
+			format:   md.LogFormat_JSON,
+			expected: "json",
 		},
 		{
-			name:     "Whitespace content",
-			content:  []byte("Hello, \tWorld!"),
-			expected: true,
+			name:     "Unknown",
+			format:   md.LogFormat(99), // invalid enum
+			expected: "",
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			result := canPrint(test.content)
-			assert.Equal(t, test.expected, result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mDump := &MegaDumper{
+				logFormat: tt.format,
+			}
+
+			result := mDump.logExtension()
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

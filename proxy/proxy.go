@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/robbyt/llm_proxy/addons"
+	md "github.com/robbyt/llm_proxy/addons/megadumper"
 	"github.com/robbyt/llm_proxy/config"
 )
 
@@ -75,7 +76,7 @@ func Run(cfg *config.Config) error {
 		log.Debug("OutputDir is empty, skipping the request dump")
 	} else {
 		log.Debugf("OutputDir is set to %v, enabling request dump", cfg.OutputDir)
-		dumper, err := addons.NewDumperWithLogRoot(cfg.OutputDir, addons.WRITE_REQ_BODY_AND_RESP_BODY)
+		dumper, err := addons.NewDumperWithLogRoot(cfg.OutputDir, md.WRITE_REQ_BODY_AND_RESP_BODY, md.LogFormat_JSON)
 		if err != nil {
 			return fmt.Errorf("failed to create dumper: %v", err)
 		}
