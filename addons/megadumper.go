@@ -72,7 +72,7 @@ func (d MegaDumper) Write(f *proxy.Flow) error {
 
 	if d.logTarget != "" {
 		// multiple log file mode enabled, will create a new singleLogFileTarget for each request
-		d.logFilename = fmt.Sprintf("%s/%s.log", d.logTarget, f.Id)
+		d.logFilename = fmt.Sprintf("%s/%s.json", d.logTarget, f.Id)
 
 		// check if the file exists
 		_, err := os.Stat(d.logFilename)
