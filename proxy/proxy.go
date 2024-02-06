@@ -16,7 +16,12 @@ import (
 )
 
 func newCA(certDir string) (*cert.CA, error) {
-	log.Debugf("Loading certs from directory: %v", certDir)
+	if certDir == "" {
+		log.Debug("No cert dir specified, defaulting to ~/.mitmproxy/")
+	} else {
+		log.Debugf("Loading certs from directory: %v", certDir)
+	}
+
 	l, err := cert.NewPathLoader(certDir)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create or load certs from %v: %v", certDir, err)
