@@ -7,16 +7,17 @@ It is heavily based on [github.com/kardianos/mitmproxy](kardianos/mitmproxy) whi
 
 1. Install Go
 2. Run `go install github.com/robbyt/llm_proxy@latest`
-3. Run `llm_proxy` with a few command line options set
-4. Set your HTTP_PROXY environment variable to `http://localhost:8080`
-5. Use the OpenAI API as you normally would
+3. Golang will download and compile this code, storing the binary in your `$GOPATH/bin` directory.
+4. By default this will compile the binary to `~/go/bin/llm_proxy`, try running `llm_proxy --help`
+4. Set your HTTP_PROXY and HTTPS_PROXY environment variable to `http://localhost:8080`
+5. Use the OpenAI API as you normally would (but, you may need to adjust this for your app.)
 
-Running the proxy server:
+### Running the proxy server
 ```bash
 $ llm_proxy dir_logger --verbose
 ```
 
-Using cURL to query, and use the proxy:
+### Using cURL to query, and use the proxy
 ```bash
 $ OPENAI_API_KEY=sk-XXXXXXX curl \
     -x http://localhost:8080 \
@@ -24,9 +25,26 @@ $ OPENAI_API_KEY=sk-XXXXXXX curl \
     -H "Authorization: Bearer $OPENAI_API_KEY" \
     http://api.openai.com/v1/models
 ```
-Note: this example sends the request to `http://` instead of `https://`. This is because the proxy
-will upgrade the request to `https://` when it sends the request to the upstream server. There is
-more information about this in the TLS section below.
+Note: this example sends the request to `http://api.openai.com/...` instead of `https://`. This is
+because the proxy will perform the SSL termination, and will upgrade the outbound request to
+`https://` when it sends the request to the upstream API server. There is more information about
+this in the TLS section below.
+
+### Using the proxy with the OpenAI Python client
+
+```python
+import httpx
+from openai import OpenAI
+
+client = OpenAI(
+    # Or use the `OPENAI_BASE_URL` env var
+    http_client=httpx.Client(
+        base_url="http://api.openai.com",
+        proxies="http://localhost:8080",
+    ),
+)
+```
+More info here: [httpx proxy config](https://www.python-httpx.org/advanced/#client-instances)
 
 ## Why is this proxy useful?
 
