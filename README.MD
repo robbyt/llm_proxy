@@ -10,16 +10,29 @@ It is heavily based on [github.com/kardianos/mitmproxy](kardianos/mitmproxy) whi
 3. Run `llm_proxy` with a few command line options set
 4. Set your HTTP_PROXY environment variable to `http://localhost:8080`
 5. Use the OpenAI API as you normally would
-    
+
+Running the proxy server:
 ```bash
-$ llm_proxy daemon --verbose --ca_dir ~/.mitmproxy
+$ llm_proxy dir_logger --verbose
 ```
 
-## Why is this useful?
+Using cURL to query, and use the proxy:
+```bash
+$ OPENAI_API_KEY=sk-XXXXXXX curl \
+    -x http://localhost:8080 \
+    -X GET \
+    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    http://api.openai.com/v1/models
+```
+Note: this example sends the request to `http://` instead of `https://`. This is because the proxy
+will upgrade the request to `https://` when it sends the request to the upstream server. There is
+more information about this in the TLS section below.
 
-For my personal use case, I want to save all requests and responses to the OpenAI API, for purposes
-of creating Fine Tuning datasets. Read more about this in the
-[OpenAI API documentation](https://platform.openai.com/docs/api-reference/fine-tuning/).
+## Why is this proxy useful?
+
+For my personal use case, I want to save all requests and responses to the OpenAI API, to enable
+__Fine Tuning__ models by sending these conversations to the OpenAI API. Read more about this in
+the [OpenAI API documentation](https://platform.openai.com/docs/api-reference/fine-tuning/).
 
 Other possible uses include:
 * Security and auditing
