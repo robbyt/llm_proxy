@@ -32,16 +32,34 @@ this in the TLS section below.
 
 ### Using the proxy with the OpenAI Python client
 
+In this example, we are changing the `base_url` to connect via `http` so the proxy can MITM the
+connection without needing to add a self-signed cert to the Python client.
+
 ```python
 import httpx
 from openai import OpenAI
 
+proxies = {
+    "http://": "http://localhost:8080",
+    "https://": "http://localhost:8080",
+}
+
 client = OpenAI(
-    # Or use the `OPENAI_BASE_URL` env var
+    # max_retries=0,
+    base_url="http://api.openai.com/v1",
     http_client=httpx.Client(
-        base_url="http://api.openai.com",
-        proxies="http://localhost:8080",
+        proxies=proxies,
     ),
+)
+
+chat_completion = client.chat.completions.create(
+    messages=[
+        {
+            "role": "user",
+            "content": "Hello, you are amazing.",
+        }
+    ],
+    model="gpt-3.5-turbo",
 )
 ```
 More info here: [httpx proxy config](https://www.python-httpx.org/advanced/#client-instances)
