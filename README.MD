@@ -1,5 +1,5 @@
 # LLM Proxy
-This is a very simple proxy server that can be used to intercept and modify requests to the OpenAI.
+This is a simple proxy server designed to intercept and modify requests to OpenAI.
 It is heavily based on [kardianos/mitmproxy](https://www.github.com/kardianos/mitmproxy) which is based on
 [mitmproxy](https://mitmproxy.org/).
 
@@ -9,8 +9,8 @@ It is heavily based on [kardianos/mitmproxy](https://www.github.com/kardianos/mi
 2. Run `go install github.com/robbyt/llm_proxy@latest`
 3. Golang will download and compile this code, storing the binary in your `$GOPATH/bin` directory.
 4. By default this will compile the binary to `~/go/bin/llm_proxy`, try running `llm_proxy --help`
-4. Set your HTTP_PROXY and HTTPS_PROXY environment variable to `http://localhost:8080`
-5. Use the OpenAI API as you normally would (but, you may need to adjust this for your app.)
+5. Set your `HTTP_PROXY` and `HTTPS_PROXY` environment variables to `http://localhost:8080`
+6. Use the OpenAI API as you normally would (but, you may need to adjust this for your app.)
 
 ### Running the proxy server
 ```bash
@@ -79,8 +79,8 @@ Other possible uses include:
 ## TLS / HTTPs Support
 
 The fastest way to use this proxy is to send requests to `http://api.openai.com`, and this proxy
-will upgrade and MITM those requests/responses. This is fine if you are connecting to this proxy
-over  `localhost` or a secure network, in this case the flow would be: 
+will upgrade and MITM those requests/responses. This approach is secure if you are connecting to
+this proxy over `localhost` or a secure network. In this case the flow would be:
 `http://api.openai.com->llm_proxy->https://api.openai.com`
 
 This is *fine* for connecting via `localhost` because local traffic on a single computer does not
