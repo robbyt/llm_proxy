@@ -15,14 +15,7 @@ import (
 	"github.com/robbyt/llm_proxy/config"
 )
 
-func getDebugLevel() int {
-	if log.GetLevel() >= log.DebugLevel {
-		return 1
-	}
-	return 0
-}
-
-func setupCA(certDir string) (*cert.CA, error) {
+func newCA(certDir string) (*cert.CA, error) {
 	log.Debugf("Loading certs from directory: %v", certDir)
 	l, err := cert.NewPathLoader(certDir)
 	if err != nil {
@@ -37,24 +30,31 @@ func setupCA(certDir string) (*cert.CA, error) {
 	return ca, nil
 }
 
-func Run(cfg *config.Config) error {
-	debugLevel := getDebugLevel()
-
-	log.Debugf("Loading certs from directory: %v", cfg.CertDir)
-	ca, err := setupCA(cfg.CertDir)
-	if err != nil {
-		return fmt.Errorf("setupCA error: %v", err)
-	}
-
+func newProxy(debugLevel int, listenOn string, skipVerifyTLS bool, ca *cert.CA) (*px.Proxy, error) {
 	opts := &px.Options{
 		Debug:                 debugLevel,
-		Addr:                  cfg.Listen,
-		InsecureSkipVerifyTLS: cfg.InsecureSkipVerifyTLS,
+		Addr:                  listenOn,
+		InsecureSkipVerifyTLS: skipVerifyTLS,
 		CA:                    ca,
 		StreamLargeBodies:     1024 * 1024 * 100, // responses larger than 100MB will be streamed
 	}
 
 	p, err := px.NewProxy(opts)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func Run(cfg *config.Config) error {
+	debugLevel := cfg.GetDebugLevel()
+
+	ca, err := newCA(cfg.CertDir)
+	if err != nil {
+		return fmt.Errorf("setupCA error: %v", err)
+	}
+
+	p, err := newProxy(debugLevel, cfg.Listen, cfg.InsecureSkipVerifyTLS, ca)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy: %v", err)
 	}

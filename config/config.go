@@ -15,6 +15,7 @@ type Config struct {
 	WriteJsonFormatLogs   bool // if true, write logs in JSON format
 	Verbose               bool // if true, print runtime activity to stderr
 	Debug                 bool // if true, print debug information to stderr
+	Trace                 bool // if true, print detailed report caller tracing to stderr, for debugging
 	logLevelHasBeenSet    bool // internal flag to track if the log level has been set
 }
 
@@ -22,8 +23,9 @@ type Config struct {
 func (cfg *Config) SetLoggerLevel() {
 	if cfg.Debug {
 		log.SetLevel(log.DebugLevel)
-		// enable this for full code tracing output
-		// log.SetReportCaller(true)
+		if cfg.Trace {
+			log.SetReportCaller(true)
+		}
 	} else if cfg.Verbose {
 		log.SetLevel(log.InfoLevel)
 	} else {

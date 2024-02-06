@@ -27,37 +27,22 @@ package cmd
 import (
 	"os"
 
-	"github.com/robbyt/llm_proxy/config"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
-
-func setLoggerLevel(cfg *config.Config) {
-	if cfg.Debug {
-		log.SetLevel(log.DebugLevel)
-		// enable this for full code tracing output
-		// log.SetReportCaller(true)
-	} else if cfg.Verbose {
-		log.SetLevel(log.InfoLevel)
-	} else {
-		log.SetLevel(log.WarnLevel)
-	}
-	log.Info("Logger level set to: ", log.GetLevel())
-}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "llm_proxy",
 	Short: "Proxy your LLM traffic for logging, security evaluation, and fine-tuning.",
-	Long: `llm_proxy is a HTTP MITM proxy that logs all requests and responses.
+	Long: `llm_proxy is an HTTP MITM (Man-In-The-Middle) proxy designed to log all requests and responses.
 
 This is useful for:
-  * security (this daemon can be run in a DMZ to bridge isolated applications and external LLM providers)
-  * debugging (track all LLM traffic, and review it later if your app is producing unexpected results)
-  * fine tuning (save all requests and responses to use as fine tuning data, which can improve LLM performance and accuracy)
+  * Security: The proxy daemon can operate in a DMZ to facilitate communication between isolated applications and external LLM API providers.
+  * Debugging: It allows tracking all LLM API traffic, to enable later review if an application yields unexpected results.
+  * Fine-tuning: By saving all requests and responses, this proxy allows the collection of fine-tuning data, which can be used to enhance LLM performance and accuracy.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		setLoggerLevel(cfg)
+		cfg.SetLoggerLevel()
 	},
 }
 
@@ -72,6 +57,9 @@ func Execute() {
 
 func init() {
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true // don't show the default completion command in help
-	rootCmd.PersistentFlags().BoolVarP(&cfg.Verbose, "verbose", "v", false, "Print runtime activity to stdout")
-	rootCmd.PersistentFlags().BoolVarP(&cfg.Debug, "debug", "d", false, "Print debug information to stderr")
+	rootCmd.PersistentFlags().BoolVarP(&cfg.Verbose, "verbose", "v", cfg.Verbose, "Print runtime activity to stderr")
+	rootCmd.PersistentFlags().BoolVarP(&cfg.Debug, "debug", "d", cfg.Debug, "Print debug information to stderr")
+	rootCmd.PersistentFlags().BoolVarP(&cfg.Trace, "trace", "", cfg.Trace, "Print detailed trace debugging information to stderr, requires --debug to also be set")
+
+	rootCmd.PersistentFlags().StringVarP(&cfg.CertDir, "ca_dir", "c", cfg.CertDir, "Path to the local trusted certificate, for TLS MITM")
 }
