@@ -13,7 +13,7 @@ type Config struct {
 	InsecureSkipVerifyTLS bool // if true, MITM will not verify the TLS certificate of the target server
 	NoHttpUpgrader        bool // if true, the proxy will NOT upgrade http requests to https
 	WriteJsonFormatLogs   bool // if true, write logs in JSON format
-	Verbose               bool // if true, print runtime activity to stdout
+	Verbose               bool // if true, print runtime activity to stderr
 	Debug                 bool // if true, print debug information to stderr
 	logLevelHasBeenSet    bool // internal flag to track if the log level has been set
 }
