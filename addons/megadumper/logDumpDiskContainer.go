@@ -11,6 +11,7 @@ type LogDumpDiskContainer struct {
 	RequestBody     string `json:"request_body,omitempty"`
 	ResponseHeaders string `json:"response_headers,omitempty"`
 	ResponseBody    string `json:"response_body,omitempty"`
+	RawLogBytes     []byte `json:"-"`
 }
 
 // DumpToJSONBytes converts the requestLogDump struct to a byte array, omitting fields that are empty
@@ -20,4 +21,12 @@ func (d *LogDumpDiskContainer) DumpToJSONBytes() ([]byte, error) {
 		return nil, fmt.Errorf("failed to marshal requestLogDump to JSON: %w", err)
 	}
 	return j, nil
+}
+
+// Read returns the rawLogBytes if it is not nil, otherwise it calls DumpToJSONBytes and returns the resulting byte array
+func (d *LogDumpDiskContainer) Read() ([]byte, error) {
+	if d.RawLogBytes != nil {
+		return d.RawLogBytes, nil
+	}
+	return d.DumpToJSONBytes()
 }

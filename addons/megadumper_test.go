@@ -81,7 +81,7 @@ func TestMegaDumper_SingleLogFileTarget(t *testing.T) {
 			Body:       []byte("Hello, World!"),
 		},
 	}
-	dumper.Write(flow)
+	dumper.writeLog(flow)
 
 	// TODO check the in-memory log file
 

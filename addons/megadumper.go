@@ -32,19 +32,29 @@ func (d *MegaDumper) logExtension() string {
 	}
 }
 
+// Requestheaders is a callback for the Requestheaders event
 func (d *MegaDumper) Requestheaders(f *proxy.Flow) {
 	go func() {
 		<-f.Done()
-		d.Write(f)
+		d.writeLog(f)
 	}()
 }
 
-func (d MegaDumper) Write(f *proxy.Flow) error {
-	logDump, err := d.prepJSONobj(f)
+func (d MegaDumper) writeLog(f *proxy.Flow) error {
+	var logDump *md.LogDumpDiskContainer
+	var err error
+
+	switch d.logFormat {
+	case md.LogFormat_JSON:
+		logDump, err = d.prepJSONobj(f)
+	case md.LogFormat_PLAINTEXT:
+		logDump, err = d.prepDumpBytes(f)
+	}
+
 	if err != nil {
 		return err
 	}
-	bytesToWrite, err := logDump.DumpToJSONBytes()
+	bytesToWrite, err := logDump.Read()
 	if err != nil {
 		return err
 	}
@@ -80,7 +90,7 @@ func (d MegaDumper) diskWriter(bytes []byte) error {
 
 // prepJSONobj is a blocking call, run by .Write after <-f.Done() (alternative to prepDumpBytes)
 func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*md.LogDumpDiskContainer, error) {
-	req := &md.LogDumpDiskContainer{}
+	dumpContainer := &md.LogDumpDiskContainer{}
 
 	// request headers
 	switch d.logLevel {
@@ -91,7 +101,7 @@ func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*md.LogDumpDiskContainer, error
 			if err := f.Request.Header.WriteSubset(buf, nil); err != nil {
 				log.Error(err)
 			} else {
-				req.RequestHeaders = buf.String()
+				dumpContainer.RequestHeaders = buf.String()
 			}
 		} else {
 			log.Error("request is nil, unable to write request headers")
@@ -105,7 +115,7 @@ func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*md.LogDumpDiskContainer, error
 		if f.Request != nil {
 			// TODO: CanPrint converts to a string, so no need to do it twice
 			if f.Request != nil && len(f.Request.Body) > 0 && md.CanPrint(f.Request.Body) {
-				req.RequestBody = string(f.Request.Body)
+				dumpContainer.RequestBody = string(f.Request.Body)
 			}
 		} else {
 			log.Error("request is nil, unable to write request headers")
@@ -123,7 +133,7 @@ func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*md.LogDumpDiskContainer, error
 				// continue here, if unable to store the full response
 				log.Error(err)
 			} else {
-				req.ResponseHeaders = buf.String()
+				dumpContainer.ResponseHeaders = buf.String()
 			}
 
 		}
@@ -136,16 +146,18 @@ func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*md.LogDumpDiskContainer, error
 		if f.Response.Body != nil && len(f.Response.Body) > 0 && f.Response.IsTextContentType() {
 			body, err := f.Response.DecodedBody()
 			if err == nil && body != nil && len(body) > 0 {
-				req.ResponseBody = string(body)
+				dumpContainer.ResponseBody = string(body)
 			}
 		}
 	}
 
-	return req, nil
+	return dumpContainer, nil
 }
 
 // prepDumpBytes is a blocking call, run by .Write after <-f.Done()
-func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*bytes.Buffer, error) {
+func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*md.LogDumpDiskContainer, error) {
+	dumpContainer := &md.LogDumpDiskContainer{}
+
 	// Reference httputil.DumpRequest.
 	buf := bytes.NewBuffer(make([]byte, 0))
 
@@ -212,21 +224,22 @@ func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*bytes.Buffer, error) {
 	}
 
 	buf.WriteString("\r\n\r\n")
-	return buf, nil
+	dumpContainer.RawLogBytes = buf.Bytes()
+	return dumpContainer, nil
 }
 
 // newDumper is an abstract factory for creating a MegaDumper, configured for logging to a single file
-func newDumper(out io.Writer, lvl md.LogLevel) *MegaDumper {
-	return &MegaDumper{singleLogFileTarget: out, logLevel: lvl}
+func newDumper(out io.Writer, lvl md.LogLevel, logFormat md.LogFormat) *MegaDumper {
+	return &MegaDumper{singleLogFileTarget: out, logLevel: lvl, logFormat: logFormat}
 }
 
 // NewDumperWithFilename creates a dumper, and a single file, and writes all logs to that one file
-func NewDumperWithFilename(filename string, lvl md.LogLevel) (*MegaDumper, error) {
+func NewDumperWithFilename(filename string, lvl md.LogLevel, logFormat md.LogFormat) (*MegaDumper, error) {
 	out, err := md.NewFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	return newDumper(out, lvl), nil
+	return newDumper(out, lvl, logFormat), nil
 }
 
 // NewDumperWithLogRoot creates a new dumper that creates a new log file for each request
