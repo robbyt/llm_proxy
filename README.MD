@@ -1,6 +1,6 @@
 # LLM Proxy
 This is a very simple proxy server that can be used to intercept and modify requests to the OpenAI.
-It is heavily based on [github.com/kardianos/mitmproxy](kardianos/mitmproxy) which is based on
+It is heavily based on [kardianos/mitmproxy](https://www.github.com/kardianos/mitmproxy) which is based on
 [mitmproxy](https://mitmproxy.org/).
 
 ## How to use
