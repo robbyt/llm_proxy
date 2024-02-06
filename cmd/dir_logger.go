@@ -26,24 +26,11 @@ var dirLoggerCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(dirLoggerCmd)
-	dirLoggerCmd.Flags().StringVarP(
-		&cfg.Listen, "listen", "l", cfg.Listen,
-		"Address to listen on",
-	)
-	dirLoggerCmd.Flags().StringVarP(
-		&cfg.CertDir, "ca_dir", "c", cfg.CertDir,
-		"Path to the local trusted certificate, for TLS MITM",
-	)
-	dirLoggerCmd.Flags().BoolVarP(
-		&cfg.InsecureSkipVerifyTLS, "skip-upstream-tls-verify", "K", cfg.InsecureSkipVerifyTLS,
-		"Skip upstream TLS cert verification",
-	)
-	dirLoggerCmd.Flags().BoolVarP(
-		&cfg.NoHttpUpgrader, "no-http-upgrader", "", cfg.NoHttpUpgrader,
-		"Disable the http->https upgrader. If set, the proxy will not upgrade http requests to https.",
-	)
 
-	cfg.OutputDir = "/tmp/llm_proxy" // set a default output directory for this command
+	// setting the default value here instead of in the config struct, because setting this
+	// to _something_ reconfigures the output, to write to a directory instead of a single file.
+	cfg.OutputDir = "/tmp/llm_proxy"
+
 	dirLoggerCmd.Flags().StringVarP(
 		&cfg.OutputDir, "output", "o", cfg.OutputDir,
 		"Directory to write logs",

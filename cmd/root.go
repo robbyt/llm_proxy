@@ -61,5 +61,20 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&cfg.Debug, "debug", "d", cfg.Debug, "Print debug information to stderr")
 	rootCmd.PersistentFlags().BoolVarP(&cfg.Trace, "trace", "", cfg.Trace, "Print detailed trace debugging information to stderr, requires --debug to also be set")
 
-	rootCmd.PersistentFlags().StringVarP(&cfg.CertDir, "ca_dir", "c", cfg.CertDir, "Path to the local trusted certificate, for TLS MITM")
+	dirLoggerCmd.Flags().StringVarP(
+		&cfg.Listen, "listen", "l", cfg.Listen,
+		"Address to listen on",
+	)
+	dirLoggerCmd.Flags().StringVarP(
+		&cfg.CertDir, "ca_dir", "c", cfg.CertDir,
+		"Path to the local trusted certificate, for TLS MITM",
+	)
+	dirLoggerCmd.Flags().BoolVarP(
+		&cfg.InsecureSkipVerifyTLS, "skip-upstream-tls-verify", "K", cfg.InsecureSkipVerifyTLS,
+		"Skip upstream TLS cert verification",
+	)
+	dirLoggerCmd.Flags().BoolVarP(
+		&cfg.NoHttpUpgrader, "no-http-upgrader", "", cfg.NoHttpUpgrader,
+		"Disable the http->https upgrader. If set, the proxy will not upgrade http requests to https.",
+	)
 }

@@ -26,8 +26,4 @@ var simpleCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(simpleCmd)
-	simpleCmd.Flags().StringVarP(&cfg.Listen, "listen", "l", cfg.Listen, "Address to listen on")
-	simpleCmd.Flags().StringVarP(&cfg.CertDir, "ca_dir", "c", cfg.CertDir, "Path to the local trusted certificate, for TLS MITM")
-	simpleCmd.Flags().BoolVarP(&cfg.InsecureSkipVerifyTLS, "no-upstream-tls-verify", "K", cfg.InsecureSkipVerifyTLS, "Skip upstream TLS cert verification")
-	simpleCmd.Flags().BoolVarP(&cfg.NoHttpUpgrader, "no-http-upgrader", "", cfg.NoHttpUpgrader, "Disable the http->https upgrader. If set, the proxy will not upgrade http requests to https.")
 }
