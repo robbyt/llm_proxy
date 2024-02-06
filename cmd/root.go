@@ -6,19 +6,17 @@ package cmd
 import (
 	"os"
 
+	"github.com/robbyt/llm_proxy/config"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var verbose bool
-var debug bool
-
-func setLoggerLevel() {
-	if debug {
+func setLoggerLevel(cfg *config.Config) {
+	if cfg.Debug {
 		log.SetLevel(log.DebugLevel)
 		// enable this for full code tracing output
 		// log.SetReportCaller(true)
-	} else if verbose {
+	} else if cfg.Verbose {
 		log.SetLevel(log.InfoLevel)
 	} else {
 		log.SetLevel(log.WarnLevel)
@@ -38,7 +36,7 @@ This is useful for:
   * fine tuning (save all requests and responses to use as fine tuning data, which can improve LLM performance and accuracy)
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		setLoggerLevel()
+		setLoggerLevel(cfg)
 	},
 }
 
@@ -53,6 +51,6 @@ func Execute() {
 
 func init() {
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true // don't show the default completion command in help
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Print runtime activity to stdout")
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Print debug information to stderr")
+	rootCmd.PersistentFlags().BoolVarP(&cfg.Verbose, "verbose", "v", false, "Print runtime activity to stdout")
+	rootCmd.PersistentFlags().BoolVarP(&cfg.Debug, "debug", "d", false, "Print debug information to stderr")
 }

@@ -9,6 +9,8 @@ type Config struct {
 	InsecureSkipVerifyTLS bool // if true, MITM will not verify the TLS certificate of the target server
 	NoHttpUpgrader        bool // if true, the proxy will NOT upgrade http requests to https
 	WriteJsonFormatLogs   bool // if true, write logs in JSON format
+	Verbose               bool // if true, print runtime activity to stdout
+	Debug                 bool // if true, print debug information to stderr
 }
 
 func GetDefaultConfig() *Config {
@@ -19,5 +21,7 @@ func GetDefaultConfig() *Config {
 		InsecureSkipVerifyTLS: false,
 		NoHttpUpgrader:        false,
 		WriteJsonFormatLogs:   true,
+		Verbose:               false,
+		Debug:                 false,
 	}
 }
