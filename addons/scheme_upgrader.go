@@ -26,9 +26,11 @@ func (c *SchemeUpgrader) Request(f *px.Flow) {
 }
 
 func (c *SchemeUpgrader) Response(f *px.Flow) {
-	if c.upgraded {
-		if f.Response != nil && f.Response.Header != nil {
-			f.Response.Header.Add("X-Llm_proxy-scheme-upgraded", "true")
-		}
+	if !c.upgraded {
+		return
 	}
+	if f.Response == nil || f.Response.Header == nil {
+		return
+	}
+	f.Response.Header.Add("X-Llm_proxy-scheme-upgraded", "true")
 }
