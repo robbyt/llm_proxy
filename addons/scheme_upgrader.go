@@ -15,8 +15,6 @@ type SchemeUpgrader struct {
 func (c *SchemeUpgrader) Request(f *px.Flow) {
 	// upgrade to https
 	if f.Request.URL.Scheme == "https" {
-		// proxy will recover from this panic, but there's not a good API for canceling the request otherwise
-		// panic(fmt.Errorf("Request protocol must be http, https not supported: %s", f.Request.URL))
 		log.Debugf("Upgrading URL scheme from http to https not needed for URL: %s", f.Request.URL)
 		c.upgraded = false
 		return
