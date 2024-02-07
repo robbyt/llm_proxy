@@ -78,20 +78,15 @@ Other possible uses include:
 
 ## TLS / HTTPs Support
 
-The fastest way to use this proxy is to send requests to `http://api.openai.com`, and this proxy
-will upgrade and MITM those requests/responses. This approach is secure if you are connecting to
-this proxy over `localhost` or a secure network. In this case the flow would be:
-`http://api.openai.com->llm_proxy->https://api.openai.com`
+When you send requests to this proxy directed at `http://api.openai.com`, the proxy will upgrade
+those requests to `https://api.openai.com` when it sends the request to the upstream server.
 
-This is *fine* for connecting via `localhost` because local traffic on a single computer does not
-need to be encrypted, and traffic leaving the proxy will be encrypted and the upstream server's
-certificate will be validated by this proxy.
+However, if you must requests from your application to `https://api.openai.com`, you will need to
+add the self-signed cert to your trust store, or disable TLS validation in your client (not
+recommended).
 
-However, if you need to send requests from your application to `https://api.openai.com`, you will
-need to add a trust for the self-signed cert this app generates (or generate/trust your own cert.)
-
-By default, this proxy will generate a certificate at `~/.mitmproxy/mitmproxy-ca-cert.pem`.
-If you want to use a different directory, use the `-ca_dir` flag when starting this proxy daemon.
+This proxy will generate a certificate at `~/.mitmproxy/mitmproxy-ca-cert.pem`, but if you want to
+use a different directory, use the `-ca_dir` flag when starting this proxy daemon.
 
 More info here on self-signed certs and MITM:
 [https://docs.mitmproxy.org/stable/concepts-certificates/]
