@@ -5,8 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// var titleRegexp = regexp.MustCompile("(<title>)(.*?)(</title>)")
-
 type SchemeUpgrader struct {
 	px.BaseAddon
 	upgraded bool
