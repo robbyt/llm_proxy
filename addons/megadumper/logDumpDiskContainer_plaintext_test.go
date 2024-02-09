@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/kardianos/mitmproxy/proxy"
 	px "github.com/kardianos/mitmproxy/proxy"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +12,7 @@ import (
 func TestNewLogDumpDiskContainer_bytes(t *testing.T) {
 	t.Run("should create LogDumpDiskContainer_bytes correctly", func(t *testing.T) {
 		// Setup
-		f := &proxy.Flow{
+		f := &px.Flow{
 			Request: &px.Request{
 				Header: http.Header{
 					"Content-Type": []string{"application/json"},
