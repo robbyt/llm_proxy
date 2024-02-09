@@ -47,7 +47,7 @@ func (cfg *Config) GetDebugLevel() int {
 	return 0
 }
 
-func GetDefaultConfig() *Config {
+func NewDefaultConfig() *Config {
 	return &Config{
 		Listen:                "127.0.0.1:8080",
 		OutputDir:             "",
