@@ -1,7 +1,6 @@
 package addons
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -41,14 +40,14 @@ func (d *MegaDumper) Requestheaders(f *proxy.Flow) {
 }
 
 func (d MegaDumper) writeLog(f *proxy.Flow) error {
-	var logDump *md.LogDumpDiskContainer
+	var logDump md.MegaDumperWriter
 	var err error
 
 	switch d.logFormat {
 	case md.LogFormat_JSON:
-		logDump, err = d.prepJSONobj(f)
+		logDump, err = md.NewLogDumpDiskContainer_JSON(f, d.logLevel)
 	case md.LogFormat_PLAINTEXT:
-		logDump, err = d.prepDumpBytes(f)
+		logDump, err = md.NewLogDumpDiskContainer_Bytes(f, d.logLevel)
 	}
 
 	if err != nil {
@@ -86,146 +85,6 @@ func (d MegaDumper) diskWriter(bytes []byte) error {
 	log.Debugf("Writing to log file: %v", d.logFilename)
 	_, err := d.singleLogFileTarget.Write(bytes)
 	return err
-}
-
-// prepJSONobj is a blocking call, run by .Write after <-f.Done() (alternative to prepDumpBytes)
-func (d *MegaDumper) prepJSONobj(f *proxy.Flow) (*md.LogDumpDiskContainer, error) {
-	dumpContainer := &md.LogDumpDiskContainer{}
-
-	// request headers
-	switch d.logLevel {
-	case md.WRITE_REQ_HEADERS_ONLY, md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY:
-		log.Debug("Dumping request headers")
-		if f.Request != nil {
-			buf := new(bytes.Buffer)
-			if err := f.Request.Header.WriteSubset(buf, nil); err != nil {
-				log.Error(err)
-			} else {
-				dumpContainer.RequestHeaders = buf.String()
-			}
-		} else {
-			log.Error("request is nil, unable to write request headers")
-		}
-	}
-
-	// request body
-	switch d.logLevel {
-	case md.WRITE_REQ_BODY_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
-		log.Debug("Dumping request body")
-		if f.Request != nil {
-			// TODO: CanPrint converts to a string, so no need to do it twice
-			if f.Request != nil && len(f.Request.Body) > 0 && md.CanPrint(f.Request.Body) {
-				dumpContainer.RequestBody = string(f.Request.Body)
-			}
-		} else {
-			log.Error("request is nil, unable to write request headers")
-		}
-	}
-
-	// response headers
-	switch d.logLevel {
-	case md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
-		log.Debug("Dumping response headers")
-		if f.Response != nil {
-			buf := new(bytes.Buffer)
-			err := f.Response.Header.WriteSubset(buf, nil) // writing response headers
-			if err != nil {
-				// continue here, if unable to store the full response
-				log.Error(err)
-			} else {
-				dumpContainer.ResponseHeaders = buf.String()
-			}
-
-		}
-	}
-
-	// response body
-	switch d.logLevel {
-	case md.WRITE_REQ_BODY_AND_RESP_BODY, md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
-		log.Debug("Dumping response body")
-		if f.Response.Body != nil && len(f.Response.Body) > 0 && f.Response.IsTextContentType() {
-			body, err := f.Response.DecodedBody()
-			if err == nil && body != nil && len(body) > 0 {
-				dumpContainer.ResponseBody = string(body)
-			}
-		}
-	}
-
-	return dumpContainer, nil
-}
-
-// prepDumpBytes is a blocking call, run by .Write after <-f.Done()
-func (d *MegaDumper) prepDumpBytes(f *proxy.Flow) (*md.LogDumpDiskContainer, error) {
-	dumpContainer := &md.LogDumpDiskContainer{}
-
-	// Reference httputil.DumpRequest.
-	buf := bytes.NewBuffer(make([]byte, 0))
-
-	// request headers
-	switch d.logLevel {
-	case md.WRITE_REQ_HEADERS_ONLY, md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY:
-		log.Debug("Dumping request headers")
-		if f.Request != nil {
-			err := f.Request.Header.WriteSubset(buf, nil) // writing response headers
-			if err != nil {
-				// continue here, if unable to store the full response
-				log.Error(err)
-			}
-			buf.WriteString("\r\n")
-		} else {
-			log.Error("request is nil, unable to write request headers")
-		}
-	}
-
-	// request body
-	switch d.logLevel {
-	case md.WRITE_REQ_BODY_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
-		log.Debug("Dumping request body")
-		if f.Request != nil {
-			if f.Request != nil && len(f.Request.Body) > 0 && md.CanPrint(f.Request.Body) {
-				_, err := buf.Write(f.Request.Body)
-				if err != nil {
-					log.Error(err)
-					break
-				}
-				buf.WriteString("\r\n\r\n")
-			}
-		} else {
-			log.Error("request is nil, unable to write request headers")
-		}
-	}
-
-	// response headers
-	switch d.logLevel {
-	case md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
-		log.Debug("Dumping response headers")
-		if f.Response != nil {
-			err := f.Response.Header.WriteSubset(buf, nil) // writing response headers
-			if err != nil {
-				// continue here, if unable to store the full response
-				log.Error(err)
-			}
-			buf.WriteString("\r\n")
-
-		}
-	}
-
-	// response body
-	switch d.logLevel {
-	case md.WRITE_REQ_BODY_AND_RESP_BODY, md.WRITE_REQ_HEADERS_ALSO_RESP_HEADERS_AND_RESP_BODY, md.WRITE_REQ_HEADERS_AND_REQ_BODY_ALSO_RESP_HEADERS_AND_RESP_BODY:
-		log.Debug("Dumping response body")
-		if f.Response.Body != nil && len(f.Response.Body) > 0 && f.Response.IsTextContentType() {
-			body, err := f.Response.DecodedBody()
-			if err == nil && body != nil && len(body) > 0 {
-				buf.Write(body)
-				buf.WriteString("\r\n\r\n")
-			}
-		}
-	}
-
-	buf.WriteString("\r\n\r\n")
-	dumpContainer.RawLogBytes = buf.Bytes()
-	return dumpContainer, nil
 }
 
 // newDumper is an abstract factory for creating a MegaDumper, configured for logging to a single file
