@@ -47,3 +47,8 @@ func TestConfig_SetLoggerLevel_ImplicitCallToSetLoggerLevel(t *testing.T) {
 	assert.Equal(t, 0, cfg.GetDebugLevel())
 	assert.Equal(t, true, cfg.logLevelHasBeenSet)
 }
+
+func TestNewDefaultConfig(t *testing.T) {
+	cfg := NewDefaultConfig()
+	assert.IsType(t, &Config{}, cfg)
+}
