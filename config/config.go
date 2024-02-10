@@ -1,33 +1,37 @@
 package config
 
-// Config objects configure the proxy proxy.
+// Config is the main config mega-struct
 type Config struct {
-	httpBehavior
-	terminalLogger
-	trafficLogger
+	*httpBehavior
+	*terminalLogger
+	*trafficLogger
 }
 
+func (cfg *Config) getTerminalLogger() *terminalLogger {
+	if cfg.terminalLogger == nil {
+		cfg.terminalLogger = &terminalLogger{}
+	}
+
+	return cfg.terminalLogger
+}
 func (cfg *Config) SetLoggerLevel() {
-	cfg.terminalLogger.setLoggerLevel()
+	cfg.getTerminalLogger().setLoggerLevel()
 }
 
 func (cfg *Config) GetDebugLevel() int {
-	return cfg.terminalLogger.getDebugLevel()
+	return cfg.getTerminalLogger().getDebugLevel()
 }
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		httpBehavior: httpBehavior{
+		httpBehavior: &httpBehavior{
 			Listen:                "127.0.0.1:8080",
 			CertDir:               "",
 			InsecureSkipVerifyTLS: false,
 			NoHttpUpgrader:        false,
 		},
-		terminalLogger: terminalLogger{
-			Verbose: false,
-			Debug:   false,
-		},
-		trafficLogger: trafficLogger{
+		terminalLogger: &terminalLogger{},
+		trafficLogger: &trafficLogger{
 			OutputDir:           "",
 			WriteJsonFormatLogs: true,
 		},

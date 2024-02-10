@@ -65,7 +65,7 @@ func Run(cfg *config.Config) error {
 	}
 
 	if debugLevel > 0 {
-		log.Debugf("Debug level is set to %v, enabling stdout request logs", debugLevel)
+		log.Debugf("Debug level is set to %v, enabling traffic logging to terminal", debugLevel)
 		p.AddAddon(&addons.StdOutLogger{})
 	}
 
@@ -78,13 +78,21 @@ func Run(cfg *config.Config) error {
 	}
 
 	if cfg.OutputDir == "" {
-		log.Debug("OutputDir is empty, skipping the request dump")
+		log.Debug("OutputDir is empty, skipping the traffic dump")
 	} else {
-		log.Debugf("OutputDir is set to %v, enabling request dump", cfg.OutputDir)
-		dumper, err := addons.NewDumperWithLogRoot(cfg.OutputDir, md.WRITE_REQ_BODY_AND_RESP_BODY, md.LogFormat_JSON)
+		log.Debugf("OutputDir is set, dumping traffic to: %v", cfg.OutputDir)
+
+		// creates a formatted []LogSource containing various enum settings, pulled from the bools set in the config
+		logSources := md.LogSourceFromBools(!cfg.NoLogReqHeaders, !cfg.NoLogReqBody, !cfg.NoLogRespHeaders, !cfg.NoLogRespBody)
+		log.Debugf("Will log these fields: %v", logSources)
+
+		// create and configure MegaDirDumper addon object
+		dumper, err := addons.NewMegaDirDumper(cfg.OutputDir, md.Format_JSON, logSources, []md.LogDestination{md.WriteToDir})
 		if err != nil {
 			return fmt.Errorf("failed to create dumper: %v", err)
 		}
+
+		// add the dumper to the proxy
 		p.AddAddon(dumper)
 	}
 
@@ -97,7 +105,7 @@ func Run(cfg *config.Config) error {
 		p.Shutdown(context.TODO())
 	}()
 
-	log.Infof("Starting proxy on: %v", cfg.Listen)
+	// log.Infof("Starting proxy on: %v", cfg.Listen)
 
 	// block here while the proxy is running
 	err = p.Start()

@@ -9,7 +9,8 @@ import (
 func TestConfig_SetLoggerLevel_ImplicitCallToSetLoggerLevel(t *testing.T) {
 	cfg := &Config{}
 
-	assert.Equal(t, false, cfg.logLevelHasBeenSet)
+	assert.Nil(t, cfg.terminalLogger)
+
 	assert.Equal(t, 0, cfg.GetDebugLevel())
 	assert.Equal(t, true, cfg.logLevelHasBeenSet)
 }
