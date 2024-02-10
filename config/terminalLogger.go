@@ -11,25 +11,25 @@ type terminalLogger struct {
 }
 
 // setLoggerLevel sets the logrus level based on verbose/debug values in the config object
-func (ocfg *terminalLogger) setLoggerLevel() {
-	if ocfg.Debug {
+func (tlo *terminalLogger) setLoggerLevel() {
+	if tlo.Debug {
 		log.SetLevel(log.DebugLevel)
-		if ocfg.Trace {
+		if tlo.Trace {
 			log.SetReportCaller(true)
 		}
-	} else if ocfg.Verbose {
+	} else if tlo.Verbose {
 		log.SetLevel(log.InfoLevel)
 	} else {
 		log.SetLevel(log.WarnLevel)
 	}
 	log.Info("Logger level set to: ", log.GetLevel())
-	ocfg.logLevelHasBeenSet = true
+	tlo.logLevelHasBeenSet = true
 }
 
 // getDebugLevel returns 1 if the log level is debug, 0 otherwise, for use in the proxy package
-func (ocfg *terminalLogger) getDebugLevel() int {
-	if !ocfg.logLevelHasBeenSet {
-		ocfg.setLoggerLevel()
+func (tlo *terminalLogger) getDebugLevel() int {
+	if !tlo.logLevelHasBeenSet {
+		tlo.setLoggerLevel()
 	}
 
 	if log.GetLevel() >= log.DebugLevel {
