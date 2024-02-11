@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/kardianos/mitmproxy/cert"
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -98,7 +99,7 @@ func Run(cfg *config.Config) error {
 
 	// setup background signal handler for clean shutdown
 	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-ch
 		log.Info("Received SIGINT, shutting down now...")
