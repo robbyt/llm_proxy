@@ -96,39 +96,39 @@ func (d *LogDumpContainer) loadResponseBody() error {
 }
 
 // NewLogDumpContainer returns a LogDumpContainer with *only* the fields requested in logSources populated
-func NewLogDumpContainer(f *px.Flow, logSources []LogSource) *LogDumpContainer {
+func NewLogDumpContainer(f *px.Flow, logSources LogSourceConfig) *LogDumpContainer {
 	dumpContainer := &LogDumpContainer{flow: f}
-	errors := make([]error, len(logSources))
+	errors := make([]error, 0)
 
-	for _, lsource := range logSources {
-		switch lsource {
-		case LogRequestHeaders:
-			log.Debug("Dumping request headers")
-			err := dumpContainer.loadRequestHeaders()
-			if err != nil {
-				errors = append(errors, err)
-			}
+	if logSources.LogRequestHeaders {
+		log.Debug("Dumping request headers")
+		err := dumpContainer.loadRequestHeaders()
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
 
-		case LogRequestBody:
-			log.Debug("Dumping request body")
-			err := dumpContainer.loadRequestBody()
-			if err != nil {
-				errors = append(errors, err)
-			}
+	if logSources.LogRequestBody {
+		log.Debug("Dumping request body")
+		err := dumpContainer.loadRequestBody()
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
 
-		case LogResponseHeaders:
-			log.Debug("Dumping response headers")
-			err := dumpContainer.loadResponseHeaders()
-			if err != nil {
-				errors = append(errors, err)
-			}
+	if logSources.LogResponseHeaders {
+		log.Debug("Dumping response headers")
+		err := dumpContainer.loadResponseHeaders()
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
 
-		case LogResponseBody:
-			log.Debug("Dumping response body")
-			err := dumpContainer.loadResponseBody()
-			if err != nil {
-				errors = append(errors, err)
-			}
+	if logSources.LogResponseBody {
+		log.Debug("Dumping response body")
+		err := dumpContainer.loadResponseBody()
+		if err != nil {
+			errors = append(errors, err)
 		}
 	}
 

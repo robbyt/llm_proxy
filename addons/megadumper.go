@@ -13,9 +13,9 @@ import (
 
 type MegaDumpAddon struct {
 	px.BaseAddon
-	formatter formatters.MegaDumpFormatter
-	sources   []md.LogSource
-	writers   []writers.MegaDumpWriter
+	formatter  formatters.MegaDumpFormatter
+	logSources md.LogSourceConfig
+	writers    []writers.MegaDumpWriter
 }
 
 // Requestheaders is a callback for the Requestheaders event
@@ -23,7 +23,7 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 	go func() {
 		<-f.Done()
 		// load the selected fields into a container object
-		dumpContainer := md.NewLogDumpContainer(f, d.sources)
+		dumpContainer := md.NewLogDumpContainer(f, d.logSources)
 
 		id := f.Id.String() // TODO: is the internal request ID unique enough?
 
@@ -51,7 +51,7 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 }
 
 // NewMegaDirDumper creates a new dumper that creates a new log file for each request
-func NewMegaDirDumper(logTarget string, logFormat md.LogFormat, logSources []md.LogSource, logDestinations []md.LogDestination) (*MegaDumpAddon, error) {
+func NewMegaDirDumper(logTarget string, logFormat md.LogFormat, logSources md.LogSourceConfig, logDestinations []md.LogDestination) (*MegaDumpAddon, error) {
 	var f formatters.MegaDumpFormatter
 	var w = make([]writers.MegaDumpWriter, 0)
 
@@ -90,9 +90,9 @@ func NewMegaDirDumper(logTarget string, logFormat md.LogFormat, logSources []md.
 	}
 
 	mda := &MegaDumpAddon{
-		formatter: f,
-		sources:   logSources,
-		writers:   w,
+		formatter:  f,
+		logSources: logSources,
+		writers:    w,
 	}
 
 	log.Debugf("Created MegaDirDumper with %v sources and %v writers", logSources, w)
