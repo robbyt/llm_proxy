@@ -34,7 +34,7 @@ func NewDefaultConfig() *Config {
 		trafficLogger: &trafficLogger{
 			OutputDir:           "",
 			WriteJsonFormatLogs: true,
-			FilterReqHeaders:    append([]string{}, defaultFilterHeaders...), // append empty to copy the slice from defaults
+			FilterReqHeaders:    append([]string{}, defaultFilterHeaders...), // append empty to deep copy the source slice
 			FilterRespHeaders:   append([]string{}, defaultFilterHeaders...),
 		},
 	}
