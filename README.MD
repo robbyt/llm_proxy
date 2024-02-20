@@ -18,11 +18,12 @@ $ llm_proxy dir_logger --verbose
 ```
 
 ### Using cURL to query, and use the proxy
+(Set your OpenAI API key in the header)
 ```bash
-$ OPENAI_API_KEY=sk-XXXXXXX curl \
+$ curl \
     -x http://localhost:8080 \
     -X GET \
-    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -H "Authorization: Bearer sk-XXXXXXX" \
     http://api.openai.com/v1/models
 ```
 Note: this example sends the request to `http://api.openai.com/...` instead of `https://`. This is
@@ -108,12 +109,12 @@ $ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.ke
 ```
 
 Using curl with proxy and self-signed cert: 
-(Set your OpenAI API key as the environment variable prefix!)
+(Set your OpenAI API key in the header)
 ```bash
-$ OPENAI_API_KEY=sk-XXXXXXX curl \
+$ curl \
     -x http://localhost:8080 \
     --cacert ~/.mitmproxy/mitmproxy-ca.pem \
     -X GET \
-    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -H "Authorization: Bearer sk-XXXXXXX" \
     https://api.openai.com/v1/models
 ```
