@@ -24,31 +24,36 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 	}
 	var container *LogDumpContainer
 
-	container = NewLogDumpContainer(flow, []LogSource{LogRequestHeaders})
+	container = NewLogDumpContainer(flow, LogSourceConfig{LogRequestHeaders: true})
 	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeaders)
 	assert.Equal(t, "", container.RequestBody)
 	assert.Equal(t, "", container.ResponseHeaders)
 	assert.Equal(t, "", container.ResponseBody)
 
-	container = NewLogDumpContainer(flow, []LogSource{LogRequestBody})
+	container = NewLogDumpContainer(flow, LogSourceConfig{LogRequestBody: true})
 	assert.Equal(t, "", container.RequestHeaders)
 	assert.Equal(t, `{"key": "value"}`, container.RequestBody)
 	assert.Equal(t, "", container.ResponseHeaders)
 	assert.Equal(t, "", container.ResponseBody)
 
-	container = NewLogDumpContainer(flow, []LogSource{LogResponseHeaders})
+	container = NewLogDumpContainer(flow, LogSourceConfig{LogResponseHeaders: true})
 	assert.Equal(t, "", container.RequestHeaders)
 	assert.Equal(t, "", container.RequestBody)
 	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeaders)
 	assert.Equal(t, "", container.ResponseBody)
 
-	container = NewLogDumpContainer(flow, []LogSource{LogResponseBody})
+	container = NewLogDumpContainer(flow, LogSourceConfig{LogResponseBody: true})
 	assert.Equal(t, "", container.RequestHeaders)
 	assert.Equal(t, "", container.RequestBody)
 	assert.Equal(t, "", container.ResponseHeaders)
 	assert.Equal(t, `{"status": "success"}`, container.ResponseBody)
 
-	container = NewLogDumpContainer(flow, []LogSource{LogRequestHeaders, LogRequestBody, LogResponseHeaders, LogResponseBody})
+	container = NewLogDumpContainer(flow, LogSourceConfig{
+		LogRequestHeaders:  true,
+		LogRequestBody:     true,
+		LogResponseHeaders: true,
+		LogResponseBody:    true,
+	})
 	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeaders)
 	assert.Equal(t, `{"key": "value"}`, container.RequestBody)
 	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeaders)
