@@ -84,7 +84,7 @@ func Run(cfg *config.Config) error {
 		log.Debugf("OutputDir is set, dumping traffic to: %v", cfg.OutputDir)
 
 		// creates a formatted []LogSource containing various enum settings, pulled from the bools set in the config
-		logSources := md.LogSourceConfig{
+		logSources := config.LogSourceConfig{
 			LogRequestHeaders:  !cfg.NoLogReqHeaders,
 			LogRequestBody:     !cfg.NoLogReqBody,
 			LogResponseHeaders: !cfg.NoLogRespHeaders,
@@ -94,7 +94,13 @@ func Run(cfg *config.Config) error {
 		log.Debugf("Will log these fields: %v", logSources)
 
 		// create and configure MegaDirDumper addon object
-		dumper, err := addons.NewMegaDirDumper(cfg.OutputDir, md.Format_JSON, logSources, []md.LogDestination{md.WriteToDir})
+		dumper, err := addons.NewMegaDirDumper(
+			cfg.OutputDir,
+			md.Format_JSON,
+			logSources,
+			[]md.LogDestination{md.WriteToDir},
+			cfg.FilterReqHeaders, cfg.FilterRespHeaders,
+		)
 		if err != nil {
 			return fmt.Errorf("failed to create dumper: %v", err)
 		}

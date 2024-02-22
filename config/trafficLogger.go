@@ -11,3 +11,27 @@ type trafficLogger struct {
 	FilterReqHeaders    []string // if set, request headers that match these strings will not be logged
 	FilterRespHeaders   []string // if set, response headers that match these strings will not be logged
 }
+
+var defaultFilterHeaders = []string{
+	"Authorization",
+	"Authorization-Info",
+	"Cookie",
+	"Openai-Organization",
+	"Proxy-Authenticate",
+	"Proxy-Authorization",
+	"Set-Cookie",
+	"WWW-Authenticate",
+	"X-Access-Token",
+	"X-Api-Key",
+	"X-Auth-Password",
+	"X-Auth-Token",
+	"X-Auth-User",
+	"X-CSRF-Token",
+	"X-Forwarded-User",
+	"X-Password",
+	"X-Refresh-Token",
+	"X-User-Email",
+	"X-User-Id",
+	"X-UserName",
+	"X-User-Secret",
+}

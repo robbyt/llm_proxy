@@ -39,19 +39,27 @@ func TestJSONFormatter(t *testing.T) {
 }
 
 func TestJSONFormatter_Empty(t *testing.T) {
-	container := &md.LogDumpContainer{
-		RequestHeaders:  "",
-		RequestBody:     "",
-		ResponseHeaders: "",
-		ResponseBody:    "",
-	}
+	container := &md.LogDumpContainer{}
 	j := &JSON{}
+	expectedJSON := `{
+	  "request_headers": "",
+	  "request_body": "",
+	  "response_headers": "",
+	  "response_body": ""
+	}`
 
-	expectedResult := []byte("{}")
-
-	result, err := j.Read(container)
+	jsonBytes, err := j.Read(container)
 	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, result)
+
+	var parsedJSON map[string]interface{}
+	err = json.Unmarshal(jsonBytes, &parsedJSON)
+	assert.NoError(t, err)
+
+	expectedParsedJSON := make(map[string]interface{})
+	err = json.Unmarshal([]byte(expectedJSON), &expectedParsedJSON)
+	assert.NoError(t, err)
+
+	assert.Equal(t, expectedParsedJSON, parsedJSON)
 }
 
 func TestJSONFormatter_implements_Reader(t *testing.T) {

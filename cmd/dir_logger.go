@@ -49,5 +49,12 @@ func init() {
 		&cfg.NoLogRespBody, "no-log-resp-body", "", cfg.NoLogRespBody,
 		"Don't log response body",
 	)
-
+	dirLoggerCmd.Flags().StringSliceVarP(
+		&cfg.FilterReqHeaders, "filter-req-headers", "", cfg.FilterReqHeaders,
+		"Request headers that match these strings will not be logged (but will still be proxied)",
+	)
+	dirLoggerCmd.Flags().StringSliceVarP(
+		&cfg.FilterRespHeaders, "filter-resp-headers", "", cfg.FilterRespHeaders,
+		"Response headers that match these strings will not be logged (but will still be proxied)",
+	)
 }
