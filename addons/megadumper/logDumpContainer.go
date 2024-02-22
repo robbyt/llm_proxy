@@ -72,7 +72,7 @@ func (d *LogDumpContainer) loadResponseBody() error {
 }
 
 func (d *LogDumpContainer) runResponseHeadersFilter() {
-	if d.flow.Response != nil || d.flow.Response.Header != nil {
+	if d.flow.Response != nil && d.flow.Response.Header != nil {
 		log.Debugf("Filtering response headers from log output: %v", d.filterRespHeaders)
 		for _, header := range d.filterRespHeaders {
 			d.flow.Response.Header.Del(header)
@@ -81,7 +81,7 @@ func (d *LogDumpContainer) runResponseHeadersFilter() {
 }
 
 func (d *LogDumpContainer) runRequestHeadersFilter() {
-	if d.flow.Request != nil || d.flow.Request.Header != nil {
+	if d.flow.Request != nil && d.flow.Request.Header != nil {
 		log.Debugf("Filtering request headers from log output: %v", d.filterReqHeaders)
 		for _, header := range d.filterReqHeaders {
 			d.flow.Request.Header.Del(header)
