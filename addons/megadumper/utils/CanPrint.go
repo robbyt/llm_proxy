@@ -1,4 +1,4 @@
-package megadumper
+package utils
 
 import (
 	"unicode"

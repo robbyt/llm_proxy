@@ -1,4 +1,4 @@
-package megadumper
+package schema
 
 import (
 	"testing"

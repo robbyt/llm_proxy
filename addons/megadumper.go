@@ -8,6 +8,7 @@ import (
 
 	md "github.com/robbyt/llm_proxy/addons/megadumper"
 	"github.com/robbyt/llm_proxy/addons/megadumper/formatters"
+	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
 	"github.com/robbyt/llm_proxy/addons/megadumper/writers"
 	"github.com/robbyt/llm_proxy/config"
 )
@@ -26,7 +27,7 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 	go func() {
 		<-f.Done()
 		// load the selected fields into a container object
-		dumpContainer := md.NewLogDumpContainer(*f, d.logSources, d.filterReqHeaders, d.filterRespHeaders)
+		dumpContainer := schema.NewLogDumpContainer(*f, d.logSources, d.filterReqHeaders, d.filterRespHeaders)
 
 		id := f.Id.String() // TODO: is the internal request ID unique enough?
 

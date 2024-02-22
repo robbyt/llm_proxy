@@ -3,11 +3,11 @@ package formatters
 import (
 	"bytes"
 
-	md "github.com/robbyt/llm_proxy/addons/megadumper"
+	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
 )
 
 type PlainText struct {
-	container *md.LogDumpContainer
+	container *schema.LogDumpContainer
 }
 
 func (pt *PlainText) flatten() ([]byte, error) {
@@ -42,7 +42,7 @@ func (pt *PlainText) flatten() ([]byte, error) {
 }
 
 // Read returns a flattened representation of all the fields in the LogDumpContainer
-func (pt *PlainText) Read(container *md.LogDumpContainer) ([]byte, error) {
+func (pt *PlainText) Read(container *schema.LogDumpContainer) ([]byte, error) {
 	pt.container = container
 	return pt.flatten()
 }

@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	md "github.com/robbyt/llm_proxy/addons/megadumper"
+	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestJSONFormatter(t *testing.T) {
-	container := &md.LogDumpContainer{
+	container := &schema.LogDumpContainer{
 		RequestHeaders:  "Request Headers",
 		RequestBody:     "Request Body",
 		ResponseHeaders: "Response Headers",
@@ -39,7 +39,7 @@ func TestJSONFormatter(t *testing.T) {
 }
 
 func TestJSONFormatter_Empty(t *testing.T) {
-	container := &md.LogDumpContainer{}
+	container := &schema.LogDumpContainer{}
 	j := &JSON{}
 	expectedJSON := `{
 	  "request_headers": "",
