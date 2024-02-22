@@ -13,7 +13,7 @@ const SchemaVersion string = "v1"
 
 // LogDumpContainer holds the request and response data for a given flow
 type LogDumpContainer struct {
-	SchemaVersion     string   `json:"schema"`
+	SchemaVersion     string   `json:"schema,omitempty"`
 	RequestHeaders    string   `json:"request_headers"`
 	RequestBody       string   `json:"request_body"`
 	ResponseHeaders   string   `json:"response_headers"`
