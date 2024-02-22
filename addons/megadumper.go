@@ -9,13 +9,16 @@ import (
 	md "github.com/robbyt/llm_proxy/addons/megadumper"
 	"github.com/robbyt/llm_proxy/addons/megadumper/formatters"
 	"github.com/robbyt/llm_proxy/addons/megadumper/writers"
+	"github.com/robbyt/llm_proxy/config"
 )
 
 type MegaDumpAddon struct {
 	px.BaseAddon
-	formatter  formatters.MegaDumpFormatter
-	logSources md.LogSourceConfig
-	writers    []writers.MegaDumpWriter
+	formatter         formatters.MegaDumpFormatter
+	logSources        config.LogSourceConfig
+	writers           []writers.MegaDumpWriter
+	filterReqHeaders  []string
+	filterRespHeaders []string
 }
 
 // Requestheaders is a callback for the Requestheaders event
@@ -23,7 +26,7 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 	go func() {
 		<-f.Done()
 		// load the selected fields into a container object
-		dumpContainer := md.NewLogDumpContainer(f, d.logSources)
+		dumpContainer := md.NewLogDumpContainer(*f, d.logSources, d.filterReqHeaders, d.filterRespHeaders)
 
 		id := f.Id.String() // TODO: is the internal request ID unique enough?
 
@@ -51,7 +54,13 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 }
 
 // NewMegaDirDumper creates a new dumper that creates a new log file for each request
-func NewMegaDirDumper(logTarget string, logFormat md.LogFormat, logSources md.LogSourceConfig, logDestinations []md.LogDestination) (*MegaDumpAddon, error) {
+func NewMegaDirDumper(
+	logTarget string,
+	logFormat md.LogFormat,
+	logSources config.LogSourceConfig,
+	logDestinations []md.LogDestination,
+	filterReqHeaders, filterRespHeaders []string,
+) (*MegaDumpAddon, error) {
 	var f formatters.MegaDumpFormatter
 	var w = make([]writers.MegaDumpWriter, 0)
 
@@ -90,12 +99,14 @@ func NewMegaDirDumper(logTarget string, logFormat md.LogFormat, logSources md.Lo
 	}
 
 	mda := &MegaDumpAddon{
-		formatter:  f,
-		logSources: logSources,
-		writers:    w,
+		formatter:         f,
+		logSources:        logSources,
+		writers:           w,
+		filterReqHeaders:  filterReqHeaders,
+		filterRespHeaders: filterRespHeaders,
 	}
 
-	log.Debugf("Created MegaDirDumper with %v sources and %v writers", logSources, w)
+	log.Debugf("Created MegaDirDumper with %s sources and %v writer(s)", logSources.String(), len(w))
 
 	return mda, nil
 
