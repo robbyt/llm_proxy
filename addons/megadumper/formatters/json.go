@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	md "github.com/robbyt/llm_proxy/addons/megadumper"
+	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
 )
 
 type JSON struct {
-	container *md.LogDumpContainer
+	container *schema.LogDumpContainer
 }
 
 // dumpToJSONBytes converts the requestLogDump struct to a byte array, omitting fields that are empty
@@ -25,7 +25,7 @@ func (f *JSON) dumpToJSONBytes() ([]byte, error) {
 }
 
 // Read returns the JSON representation of a LogDumpContainer (json formatted byte array)
-func (f *JSON) Read(container *md.LogDumpContainer) ([]byte, error) {
+func (f *JSON) Read(container *schema.LogDumpContainer) ([]byte, error) {
 	f.container = container
 	return f.dumpToJSONBytes()
 }

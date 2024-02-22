@@ -3,12 +3,12 @@ package formatters
 import (
 	"testing"
 
-	md "github.com/robbyt/llm_proxy/addons/megadumper"
+	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPlainText_flatten(t *testing.T) {
-	container := &md.LogDumpContainer{
+	container := &schema.LogDumpContainer{
 		RequestHeaders:  "Request Headers",
 		RequestBody:     "Request Body",
 		ResponseHeaders: "Response Headers",

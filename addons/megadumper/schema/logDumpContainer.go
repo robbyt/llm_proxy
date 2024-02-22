@@ -1,10 +1,11 @@
-package megadumper
+package schema
 
 import (
 	"bytes"
 	"fmt"
 
 	px "github.com/kardianos/mitmproxy/proxy"
+	"github.com/robbyt/llm_proxy/addons/megadumper/utils"
 	"github.com/robbyt/llm_proxy/config"
 	log "github.com/sirupsen/logrus"
 )
@@ -35,7 +36,7 @@ func (d *LogDumpContainer) loadRequestHeaders() error {
 
 func (d *LogDumpContainer) loadRequestBody() error {
 	// TODO CanPrint converts to a string, so there's no point in doing it twice
-	if CanPrint(d.flow.Request.Body) {
+	if utils.CanPrint(d.flow.Request.Body) {
 		d.RequestBody = string(d.flow.Request.Body)
 	}
 	return nil
