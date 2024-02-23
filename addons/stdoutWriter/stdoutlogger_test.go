@@ -43,7 +43,7 @@ func TestNewLogLine(t *testing.T) {
 	}
 
 	logLine := NewLogLine(f, 100)
-
+	assert.NotNil(t, logLine)
 	assert.Equal(t, "unknown", logLine.ClientAddress)
 	assert.Equal(t, "GET", logLine.Method)
 	assert.Equal(t, "https://example.com/testpath", logLine.URL)
