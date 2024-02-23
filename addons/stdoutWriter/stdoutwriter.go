@@ -7,6 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const UnknownAddr = "unknown"
+
 type LogLine struct {
 	ClientAddress string `json:"client_address"`
 	Method        string `json:"method"`
@@ -29,9 +31,13 @@ func (obj *LogLine) ToJSONstr() string {
 
 func getClientAddr(f *px.Flow) string {
 	if f == nil || f.ConnContext == nil || f.ConnContext.ClientConn == nil || f.ConnContext.ClientConn.Conn == nil {
-		return "unknown"
+		return UnknownAddr
 	}
-	return f.ConnContext.ClientConn.Conn.RemoteAddr().String()
+	remote := f.ConnContext.ClientConn.Conn.RemoteAddr()
+	if remote == nil {
+		return UnknownAddr
+	}
+	return remote.String()
 }
 
 func NewLogLine(f *px.Flow, doneAt int64) *LogLine {
