@@ -46,7 +46,7 @@ func (addon *StdOutLogger) Requestheaders(f *px.Flow) {
 	go func() {
 		<-f.Done()
 		doneAt := time.Since(start).Milliseconds()
-		logOutput := schema.NewConnectionStatusContainer(f, doneAt)
+		logOutput := schema.NewConnectionStatusContainer(*f, doneAt)
 		if logOutput != nil {
 			log.Info(logOutput.ToJSONstr())
 		}

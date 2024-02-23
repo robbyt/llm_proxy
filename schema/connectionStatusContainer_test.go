@@ -28,7 +28,7 @@ func TestLogStdOutLine_toJSONstr(t *testing.T) {
 
 func TestNewLogLine(t *testing.T) {
 	// Create a mock Flow object
-	f := &px.Flow{
+	f := px.Flow{
 		Request: &px.Request{
 			Method: "GET",
 			URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/testpath"},
