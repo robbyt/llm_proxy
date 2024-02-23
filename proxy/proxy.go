@@ -71,17 +71,13 @@ func Run(cfg *config.Config) error {
 		p.AddAddon(addons.NewStdOutLogger())
 	}
 
-	if cfg.NoHttpUpgrader {
-		log.Debug("NoHttpUpgrader is true, not upgrading http requests to https")
-	} else {
+	if !cfg.NoHttpUpgrader {
 		// upgrade all http requests to https
 		log.Debug("NoHttpUpgrader is false, enabling http to https upgrade")
 		p.AddAddon(&addons.SchemeUpgrader{})
 	}
 
-	if cfg.OutputDir == "" {
-		log.Debug("OutputDir is empty, skipping the traffic dump")
-	} else {
+	if cfg.OutputDir != "" {
 		log.Debugf("OutputDir is set, dumping traffic to: %v", cfg.OutputDir)
 
 		// creates a formatted []LogSource containing various enum settings, pulled from the bools set in the config
