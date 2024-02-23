@@ -20,13 +20,13 @@ func getClientAddr(f *px.Flow) string {
 	return remote.String()
 }
 
-func NewLogLine(f *px.Flow, doneAt int64) *schema.ConnectionStatsLogger {
+func NewLogLine(f *px.Flow, doneAt int64) *schema.ConnectionStatsContainer {
 	if f == nil {
 		log.Error("Flow object is nil")
 		return nil
 	}
 
-	logOutput := &schema.ConnectionStatsLogger{
+	logOutput := &schema.ConnectionStatsContainer{
 		ClientAddress: getClientAddr(f),
 		Method:        f.Request.Method,
 		URL:           f.Request.URL.String(),

@@ -13,7 +13,7 @@ import (
 )
 
 func TestLogStdOutLine_toJSONstr(t *testing.T) {
-	line := &schema.ConnectionStatsLogger{
+	line := &schema.ConnectionStatsContainer{
 		ClientAddress: "127.0.0.1",
 		Method:        "GET",
 		URL:           "http://example.com",

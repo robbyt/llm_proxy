@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type ConnectionStatsLogger struct {
+type ConnectionStatsContainer struct {
 	ClientAddress string `json:"client_address"`
 	Method        string `json:"method"`
 	URL           string `json:"url"`
@@ -18,7 +18,7 @@ type ConnectionStatsLogger struct {
 	ProxyID       string `json:"proxy_id,omitempty"`
 }
 
-func (obj *ConnectionStatsLogger) ToJSONstr() string {
+func (obj *ConnectionStatsContainer) ToJSONstr() string {
 	jsonData, err := json.Marshal(obj)
 	if err != nil {
 		log.Errorf("Failed to marshal object to JSON: %v", err)
