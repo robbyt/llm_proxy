@@ -21,12 +21,17 @@ type ConnectionStatsContainer struct {
 	ProxyID       string `json:"proxy_id,omitempty"`
 }
 
-func (obj *ConnectionStatsContainer) ToJSONstr() string {
+func (obj *ConnectionStatsContainer) ToJSON() []byte {
 	jsonData, err := json.Marshal(obj)
 	if err != nil {
 		log.Errorf("Failed to marshal object to JSON: %v", err)
+		return []byte("{}")
 	}
-	return string(jsonData)
+	return jsonData
+}
+
+func (obj *ConnectionStatsContainer) ToJSONstr() string {
+	return string(obj.ToJSON())
 }
 
 func getClientAddr(f *px.Flow) string {
