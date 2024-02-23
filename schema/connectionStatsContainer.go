@@ -41,14 +41,11 @@ func getClientAddr(f *px.Flow) string {
 	return remote.String()
 }
 
-// NewConnectionStatusContainer is a slightly leaky abstraction, the doneAt param is for logging
-// the entire session length, and comes from the proxy addon layer.
-func NewConnectionStatusContainer(f px.Flow, doneAt int64) *ConnectionStatsContainer {
+func newConnectionStatusContainer(f *px.Flow) *ConnectionStatsContainer {
 	logOutput := &ConnectionStatsContainer{
-		ClientAddress: getClientAddr(&f),
+		ClientAddress: getClientAddr(f),
 		Method:        f.Request.Method,
 		URL:           f.Request.URL.String(),
-		Duration:      doneAt,
 		ProxyID:       f.Id.String(),
 	}
 
@@ -65,5 +62,13 @@ func NewConnectionStatusContainer(f px.Flow, doneAt int64) *ConnectionStatsConta
 		logOutput.XreqID = f.Response.Header.Get("X-Request-Id")
 	}
 
+	return logOutput
+}
+
+// NewConnectionStatusContainerWithDuration is a slightly leaky abstraction, the doneAt param is for logging
+// the entire session length, and comes from the proxy addon layer.
+func NewConnectionStatusContainerWithDuration(f px.Flow, doneAt int64) *ConnectionStatsContainer {
+	logOutput := newConnectionStatusContainer(&f)
+	logOutput.Duration = doneAt
 	return logOutput
 }
