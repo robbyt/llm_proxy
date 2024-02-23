@@ -45,12 +45,11 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 				log.Error("Writer is nil, skipping")
 				continue
 			}
-			bytesWritten, err := w.Write(id, formattedDump)
+			_, err := w.Write(id, formattedDump)
 			if err != nil {
 				log.Error(err)
 				continue
 			}
-			log.Debugf("Writer %v wrote %v bytes for %v", w, bytesWritten, id)
 		}
 	}()
 }
