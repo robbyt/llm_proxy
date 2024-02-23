@@ -52,6 +52,7 @@ func newProxy(debugLevel int, listenOn string, skipVerifyTLS bool, ca *cert.CA) 
 	return p, nil
 }
 
+// Run is the main entry point for the proxy, full of imperative code, config processing, and error handling
 func Run(cfg *config.Config) error {
 	debugLevel := cfg.GetDebugLevel()
 
