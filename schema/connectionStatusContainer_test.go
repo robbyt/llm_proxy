@@ -12,17 +12,16 @@ import (
 
 func TestLogStdOutLine_toJSONstr(t *testing.T) {
 	line := &ConnectionStatsContainer{
-		ClientAddress: "127.0.0.1",
-		Method:        "GET",
-		URL:           "http://example.com",
-		StatusCode:    200,
-		ContentLength: 13,
-		Duration:      100,
-		ContentType:   "text/plain",
-		XreqID:        "123",
+		ClientAddress:       "127.0.0.1",
+		Method:              "GET",
+		URL:                 "http://example.com",
+		StatusCode:          200,
+		ContentLength:       13,
+		Duration:            100,
+		ResponseContentType: "text/plain",
 	}
 
-	expected := `{"client_address":"127.0.0.1","method":"GET","url":"http://example.com","status_code":200,"content_length":13,"duration_ms":100,"content_type":"text/plain","x_request_id":"123"}`
+	expected := `{"client_address":"127.0.0.1","method":"GET","url":"http://example.com","status_code":200,"content_length":13,"duration_ms":100,"response_content_type":"text/plain"}`
 	assert.Equal(t, expected, line.ToJSONstr())
 }
 
@@ -47,8 +46,7 @@ func TestNewLogLine(t *testing.T) {
 	assert.Equal(t, "GET", logLine.Method)
 	assert.Equal(t, "https://example.com/testpath", logLine.URL)
 	assert.Equal(t, 200, logLine.StatusCode)
-	assert.Equal(t, "application/json", logLine.ContentType)
-	assert.Equal(t, "1234", logLine.XreqID)
+	assert.Equal(t, "application/json", logLine.ResponseContentType)
 	assert.Equal(t, f.Id.String(), logLine.ProxyID)
 	assert.Equal(t, int64(100), logLine.Duration)
 }

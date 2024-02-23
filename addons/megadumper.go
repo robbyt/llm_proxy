@@ -94,6 +94,13 @@ func NewMegaDirDumper(
 				return nil, err
 			}
 			w = append(w, fileWriter)
+		case md.WriteToStdOut:
+			log.Debug("Standard out logger enabled")
+			stdoutWriter, err := writers.NewToStdOut()
+			if err != nil {
+				return nil, err
+			}
+			w = append(w, stdoutWriter)
 		default:
 			return nil, fmt.Errorf("invalid log destination: %v", logDest)
 		}

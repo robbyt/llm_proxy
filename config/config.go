@@ -18,8 +18,16 @@ func (cfg *Config) SetLoggerLevel() {
 	cfg.getTerminalLogger().setLoggerLevel()
 }
 
-func (cfg *Config) GetDebugLevel() int {
+func (cfg *Config) IsDebugEnabled() int {
 	return cfg.getTerminalLogger().getDebugLevel()
+}
+
+// IsVerboseOrHigher returns 1 if the log level is verbose or higher
+func (cfg *Config) IsVerboseOrHigher() bool {
+	if cfg.getTerminalLogger().Verbose || cfg.getTerminalLogger().Debug || cfg.getTerminalLogger().Trace {
+		return true
+	}
+	return false
 }
 
 func NewDefaultConfig() *Config {

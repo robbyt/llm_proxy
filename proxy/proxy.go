@@ -54,7 +54,9 @@ func newProxy(debugLevel int, listenOn string, skipVerifyTLS bool, ca *cert.CA) 
 
 // Run is the main entry point for the proxy, full of imperative code, config processing, and error handling
 func Run(cfg *config.Config) error {
-	debugLevel := cfg.GetDebugLevel()
+	// create a slice of LogDestination objects, which are used to configure the MegaDirDumper addon
+	logDest := []md.LogDestination{}
+	debugLevel := cfg.IsDebugEnabled()
 
 	ca, err := newCA(cfg.CertDir)
 	if err != nil {
@@ -66,8 +68,9 @@ func Run(cfg *config.Config) error {
 		return fmt.Errorf("failed to create proxy: %v", err)
 	}
 
-	if debugLevel > 0 {
-		log.Debugf("Debug level is set to %v, enabling traffic logging to terminal", debugLevel)
+	if cfg.IsVerboseOrHigher() {
+		log.Debugf("Enabling traffic logging to terminal")
+		logDest = append(logDest, md.WriteToStdOut)
 		p.AddAddon(addons.NewStdOutLogger())
 	}
 
@@ -87,15 +90,17 @@ func Run(cfg *config.Config) error {
 			LogResponseHeaders: !cfg.NoLogRespHeaders,
 			LogResponseBody:    !cfg.NoLogRespBody,
 		}
-
 		log.Debugf("Will log these fields: %v", logSources)
+
+		// append the WriteToDir LogDestination to the logDest slice, so megadumper will write to disk
+		logDest = append(logDest, md.WriteToDir)
 
 		// create and configure MegaDirDumper addon object
 		dumper, err := addons.NewMegaDirDumper(
 			cfg.OutputDir,
 			md.Format_JSON,
 			logSources,
-			[]md.LogDestination{md.WriteToDir},
+			logDest,
 			cfg.FilterReqHeaders, cfg.FilterRespHeaders,
 		)
 		if err != nil {
