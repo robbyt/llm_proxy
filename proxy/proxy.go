@@ -67,7 +67,7 @@ func Run(cfg *config.Config) error {
 
 	if debugLevel > 0 {
 		log.Debugf("Debug level is set to %v, enabling traffic logging to terminal", debugLevel)
-		p.AddAddon(&addons.StdOutLogger{})
+		p.AddAddon(addons.NewStdOutLogger())
 	}
 
 	if cfg.NoHttpUpgrader {
