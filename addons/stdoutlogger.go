@@ -46,7 +46,9 @@ func (addon *StdOutLogger) Requestheaders(f *px.Flow) {
 		<-f.Done()
 		doneAt := time.Since(start).Milliseconds()
 		logOutput := stdoutWriter.NewLogLine(f, doneAt)
-		log.Info(logOutput.ToJSONstr())
+		if logOutput != nil {
+			log.Info(logOutput.ToJSONstr())
+		}
 	}()
 }
 
