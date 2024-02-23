@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"net/url"
 	"testing"
 
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -11,6 +12,11 @@ import (
 func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 	flow := &px.Flow{
 		Request: &px.Request{
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "example.com",
+				Path:   "/",
+			},
 			Header: map[string][]string{
 				"Content-Type": {"[application/json]"},
 			},

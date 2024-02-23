@@ -3,7 +3,7 @@ package formatters
 import (
 	"testing"
 
-	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
+	"github.com/robbyt/llm_proxy/schema"
 	"github.com/stretchr/testify/assert"
 )
 

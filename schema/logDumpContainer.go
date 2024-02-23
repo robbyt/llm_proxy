@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	px "github.com/kardianos/mitmproxy/proxy"
-	"github.com/robbyt/llm_proxy/addons/megadumper/utils"
 	"github.com/robbyt/llm_proxy/config"
+	"github.com/robbyt/llm_proxy/schema/utils"
 	log "github.com/sirupsen/logrus"
 )
 

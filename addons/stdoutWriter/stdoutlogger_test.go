@@ -5,14 +5,15 @@ import (
 	"net/url"
 	"testing"
 
+	px "github.com/kardianos/mitmproxy/proxy"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 
-	px "github.com/kardianos/mitmproxy/proxy"
+	"github.com/robbyt/llm_proxy/schema"
 )
 
 func TestLogStdOutLine_toJSONstr(t *testing.T) {
-	line := &LogLine{
+	line := &schema.ConnectionStatsLogger{
 		ClientAddress: "127.0.0.1",
 		Method:        "GET",
 		URL:           "http://example.com",

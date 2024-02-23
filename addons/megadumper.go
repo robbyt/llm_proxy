@@ -8,9 +8,9 @@ import (
 
 	md "github.com/robbyt/llm_proxy/addons/megadumper"
 	"github.com/robbyt/llm_proxy/addons/megadumper/formatters"
-	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
 	"github.com/robbyt/llm_proxy/addons/megadumper/writers"
 	"github.com/robbyt/llm_proxy/config"
+	"github.com/robbyt/llm_proxy/schema"
 )
 
 type MegaDumpAddon struct {
@@ -22,7 +22,8 @@ type MegaDumpAddon struct {
 	filterRespHeaders []string
 }
 
-// Requestheaders is a callback for the Requestheaders event
+// Requestheaders is a callback that will receive a "flow" from the proxy, will create a
+// NewLogDumpContainer and will use the embedded writers to finally write the log.
 func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 	go func() {
 		<-f.Done()
@@ -93,7 +94,6 @@ func NewMegaDirDumper(
 				return nil, err
 			}
 			w = append(w, fileWriter)
-
 		default:
 			return nil, fmt.Errorf("invalid log destination: %v", logDest)
 		}
