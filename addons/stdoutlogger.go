@@ -5,8 +5,9 @@ import (
 	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
-	"github.com/robbyt/llm_proxy/addons/stdoutWriter"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/robbyt/llm_proxy/schema"
 )
 
 // StdOutLogger log connection and flow
@@ -45,7 +46,7 @@ func (addon *StdOutLogger) Requestheaders(f *px.Flow) {
 	go func() {
 		<-f.Done()
 		doneAt := time.Since(start).Milliseconds()
-		logOutput := stdoutWriter.NewLogLine(f, doneAt)
+		logOutput := schema.NewConnectionStatusContainer(f, doneAt)
 		if logOutput != nil {
 			log.Info(logOutput.ToJSONstr())
 		}

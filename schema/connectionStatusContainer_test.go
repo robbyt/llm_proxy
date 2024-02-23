@@ -1,4 +1,4 @@
-package stdoutWriter
+package schema
 
 import (
 	"net/http"
@@ -8,12 +8,10 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/robbyt/llm_proxy/schema"
 )
 
 func TestLogStdOutLine_toJSONstr(t *testing.T) {
-	line := &schema.ConnectionStatsContainer{
+	line := &ConnectionStatsContainer{
 		ClientAddress: "127.0.0.1",
 		Method:        "GET",
 		URL:           "http://example.com",
@@ -43,7 +41,7 @@ func TestNewLogLine(t *testing.T) {
 		Id: uuid.NewV4(),
 	}
 
-	logLine := NewLogLine(f, 100)
+	logLine := NewConnectionStatusContainer(f, 100)
 	assert.NotNil(t, logLine)
 	assert.Equal(t, "unknown", logLine.ClientAddress)
 	assert.Equal(t, "GET", logLine.Method)
