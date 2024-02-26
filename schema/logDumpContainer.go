@@ -3,6 +3,7 @@ package schema
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -19,23 +20,25 @@ type LogDumpContainer struct {
 	SchemaVersion     string                    `json:"schema,omitempty"`
 	Timestamp         time.Time                 `json:"timestamp,omitempty"`
 	ConnectionStats   *ConnectionStatsContainer `json:"connection_stats,omitempty"`
-	RequestHeaders    string                    `json:"request_headers"`
+	RequestHeaders    http.Header               `json:"request_headers"`
 	RequestBody       string                    `json:"request_body"`
-	ResponseHeaders   string                    `json:"response_headers"`
+	ResponseHeaders   http.Header               `json:"response_headers"`
 	ResponseBody      string                    `json:"response_body"`
 	filterReqHeaders  []string                  `json:"-"`
 	filterRespHeaders []string                  `json:"-"`
 	flow              *px.Flow                  `json:"-"`
 }
 
-func (d *LogDumpContainer) loadRequestHeaders() error {
+func (d *LogDumpContainer) loadRequestHeaders() {
+	d.RequestHeaders = d.flow.Request.Header
+}
+
+func (d *LogDumpContainer) RequestHeadersString() string {
 	buf := new(bytes.Buffer)
-	if err := d.flow.Request.Header.WriteSubset(buf, nil); err != nil {
-		// error filling the buffer from the headers
-		return err
+	if err := d.RequestHeaders.WriteSubset(buf, nil); err != nil {
+		return ""
 	}
-	d.RequestHeaders = buf.String()
-	return nil
+	return buf.String()
 }
 
 func (d *LogDumpContainer) loadRequestBody() error {
@@ -46,14 +49,16 @@ func (d *LogDumpContainer) loadRequestBody() error {
 	return nil
 }
 
-func (d *LogDumpContainer) loadResponseHeaders() error {
+func (d *LogDumpContainer) loadResponseHeaders() {
+	d.ResponseHeaders = d.flow.Response.Header
+}
+
+func (d *LogDumpContainer) ResponseHeadersString() string {
 	buf := new(bytes.Buffer)
-	if err := d.flow.Response.Header.WriteSubset(buf, nil); err != nil {
-		// error filling the buffer from the headers
-		return err
+	if err := d.ResponseHeaders.WriteSubset(buf, nil); err != nil {
+		return ""
 	}
-	d.ResponseHeaders = buf.String()
-	return nil
+	return buf.String()
 }
 
 func (d *LogDumpContainer) loadResponseBody() error {
@@ -153,10 +158,9 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 
 	if logSources.LogRequestHeaders {
 		log.Debug("Dumping request headers")
-		dumpContainer.runRequestHeadersFilter()
-		err := dumpContainer.loadRequestHeaders()
-		if err != nil {
-			errors = append(errors, err)
+		if dumpContainer.flow.Request != nil && dumpContainer.flow.Request.Header != nil {
+			dumpContainer.runRequestHeadersFilter()
+			dumpContainer.loadRequestHeaders()
 		}
 	}
 
@@ -170,10 +174,9 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 
 	if logSources.LogResponseHeaders {
 		log.Debug("Dumping response headers")
-		dumpContainer.runResponseHeadersFilter()
-		err := dumpContainer.loadResponseHeaders()
-		if err != nil {
-			errors = append(errors, err)
+		if dumpContainer.flow.Response != nil && dumpContainer.flow.Response.Header != nil {
+			dumpContainer.runResponseHeadersFilter()
+			dumpContainer.loadResponseHeaders()
 		}
 	}
 

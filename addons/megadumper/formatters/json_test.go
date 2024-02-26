@@ -2,6 +2,7 @@ package formatters
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/robbyt/llm_proxy/schema"
@@ -10,18 +11,26 @@ import (
 
 func TestJSONFormatter(t *testing.T) {
 	container := &schema.LogDumpContainer{
-		RequestHeaders:  "Request Headers",
+		RequestHeaders:  http.Header{"Header": []string{"Value"}},
 		RequestBody:     "Request Body",
-		ResponseHeaders: "Response Headers",
+		ResponseHeaders: http.Header{"Header": []string{"Value"}},
 		ResponseBody:    "Response Body",
 	}
 	j := &JSON{}
 
 	expectedJSON := `{
 	  "timestamp": "0001-01-01T00:00:00Z",
-	  "request_headers": "Request Headers",
+	  "request_headers": {
+	    "Header": [
+		  "Value"
+		]
+	  },
 	  "request_body": "Request Body",
-	  "response_headers": "Response Headers",
+	  "response_headers": {
+		"Header": [
+		  "Value"
+	    ]
+	  },
 	  "response_body": "Response Body"
 	}`
 
@@ -40,13 +49,16 @@ func TestJSONFormatter(t *testing.T) {
 }
 
 func TestJSONFormatter_Empty(t *testing.T) {
-	container := &schema.LogDumpContainer{}
+	container := &schema.LogDumpContainer{
+		RequestHeaders:  http.Header{},
+		ResponseHeaders: http.Header{},
+	}
 	j := &JSON{}
 	expectedJSON := `{
 	  "timestamp": "0001-01-01T00:00:00Z",
-	  "request_headers": "",
+	  "request_headers": {},
 	  "request_body": "",
-	  "response_headers": "",
+	  "response_headers": {},
 	  "response_body": ""
 	}`
 
@@ -61,7 +73,21 @@ func TestJSONFormatter_Empty(t *testing.T) {
 	err = json.Unmarshal([]byte(expectedJSON), &expectedParsedJSON)
 	assert.NoError(t, err)
 
-	assert.Equal(t, expectedParsedJSON, parsedJSON)
+	keys := []string{"timestamp", "request_headers", "request_body", "response_headers", "response_body"}
+	for _, key := range keys {
+		parsedValue, ok := parsedJSON[key]
+		if ok {
+			expectedValue, ok := expectedParsedJSON[key]
+			if ok {
+				assert.Equal(t, expectedValue, parsedValue)
+			} else {
+				t.Errorf("Expected to find %s in expectedParsedJSON", key)
+			}
+		} else {
+			t.Errorf("Expected to find %s in parsedJSON", key)
+		}
+	}
+
 }
 
 func TestJSONFormatter_implements_Reader(t *testing.T) {

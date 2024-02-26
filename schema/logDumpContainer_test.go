@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"net/http"
 	"net/url"
 	"testing"
 
@@ -18,14 +19,14 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 				Host:   "example.com",
 				Path:   "/",
 			},
-			Header: map[string][]string{
-				"Content-Type": {"[application/json]"},
+			Header: http.Header{
+				"Content-Type": []string{"[application/json]"},
 			},
 			Body: []byte(`{"key": "value"}`),
 		},
 		Response: &px.Response{
-			Header: map[string][]string{
-				"Content-Type": {"[application/json]"},
+			Header: http.Header{
+				"Content-Type": []string{"[application/json]"},
 			},
 			Body: []byte(`{"status": "success"}`),
 		},
@@ -33,27 +34,27 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 	var container *LogDumpContainer
 
 	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogRequestHeaders: true}, 0, []string{}, []string{})
-	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeaders)
+	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeadersString())
 	assert.Equal(t, "", container.RequestBody)
-	assert.Equal(t, "", container.ResponseHeaders)
+	assert.Equal(t, "", container.ResponseHeadersString())
 	assert.Equal(t, "", container.ResponseBody)
 
 	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogRequestBody: true}, 0, []string{}, []string{})
-	assert.Equal(t, "", container.RequestHeaders)
+	assert.Equal(t, "", container.RequestHeadersString())
 	assert.Equal(t, `{"key": "value"}`, container.RequestBody)
-	assert.Equal(t, "", container.ResponseHeaders)
+	assert.Equal(t, "", container.ResponseHeadersString())
 	assert.Equal(t, "", container.ResponseBody)
 
 	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogResponseHeaders: true}, 0, []string{}, []string{})
-	assert.Equal(t, "", container.RequestHeaders)
+	assert.Equal(t, "", container.RequestHeadersString())
 	assert.Equal(t, "", container.RequestBody)
-	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeaders)
+	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeadersString())
 	assert.Equal(t, "", container.ResponseBody)
 
 	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogResponseBody: true}, 0, []string{}, []string{})
-	assert.Equal(t, "", container.RequestHeaders)
+	assert.Equal(t, "", container.RequestHeadersString())
 	assert.Equal(t, "", container.RequestBody)
-	assert.Equal(t, "", container.ResponseHeaders)
+	assert.Equal(t, "", container.ResponseHeadersString())
 	assert.Equal(t, `{"status": "success"}`, container.ResponseBody)
 
 	container = NewLogDumpContainer(
@@ -68,9 +69,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 		[]string{},
 		[]string{},
 	)
-	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeaders)
+	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeadersString())
 	assert.Equal(t, `{"key": "value"}`, container.RequestBody)
-	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeaders)
+	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeadersString())
 	assert.Equal(t, `{"status": "success"}`, container.ResponseBody)
 
 }
