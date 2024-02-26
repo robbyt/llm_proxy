@@ -85,6 +85,7 @@ func Run(cfg *config.Config) error {
 
 		// creates a formatted []LogSource containing various enum settings, pulled from the bools set in the config
 		logSources := config.LogSourceConfig{
+			LogConnectionStats: !cfg.NoLogConnStats,
 			LogRequestHeaders:  !cfg.NoLogReqHeaders,
 			LogRequestBody:     !cfg.NoLogReqBody,
 			LogResponseHeaders: !cfg.NoLogRespHeaders,

@@ -4,6 +4,7 @@ package config
 type trafficLogger struct {
 	OutputDir           string   // Directory to write logs
 	WriteJsonFormatLogs bool     // if true, write logs in JSON format
+	NoLogConnStats      bool     // if true, do not log connection stats
 	NoLogReqHeaders     bool     // if true, log request headers
 	NoLogReqBody        bool     // if true, log request body
 	NoLogRespHeaders    bool     // if true, log response headers

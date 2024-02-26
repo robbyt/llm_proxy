@@ -3,12 +3,9 @@ package addons
 
 import (
 	"fmt"
-	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/robbyt/llm_proxy/schema"
 )
 
 // StdOutLogger log connection and flow
@@ -50,23 +47,6 @@ func (addon *StdOutLogger) ServerDisconnected(connCtx *px.ConnContext) {
 			),
 		}
 	})
-}
-
-func (addon *StdOutLogger) Requestheaders(f *px.Flow) {
-	start := time.Now()
-	go func() {
-		<-f.Done()
-		// InfoFn will only render if logging is verbose enough
-		log.InfoFn(func() []interface{} {
-			doneAt := time.Since(start).Milliseconds()
-			logOutput := schema.NewConnectionStatusContainerWithDuration(*f, doneAt)
-			if logOutput == nil {
-				return nil
-			}
-
-			return []interface{}{logOutput.ToJSONstr()}
-		})
-	}()
 }
 
 func NewStdOutLogger() *StdOutLogger {

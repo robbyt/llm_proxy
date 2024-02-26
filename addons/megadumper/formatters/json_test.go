@@ -18,6 +18,7 @@ func TestJSONFormatter(t *testing.T) {
 	j := &JSON{}
 
 	expectedJSON := `{
+	  "timestamp": "0001-01-01T00:00:00Z",
 	  "request_headers": "Request Headers",
 	  "request_body": "Request Body",
 	  "response_headers": "Response Headers",
@@ -42,6 +43,7 @@ func TestJSONFormatter_Empty(t *testing.T) {
 	container := &schema.LogDumpContainer{}
 	j := &JSON{}
 	expectedJSON := `{
+	  "timestamp": "0001-01-01T00:00:00Z",
 	  "request_headers": "",
 	  "request_body": "",
 	  "response_headers": "",

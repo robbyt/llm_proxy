@@ -3,25 +3,29 @@ package schema
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/robbyt/llm_proxy/config"
 	"github.com/robbyt/llm_proxy/schema/utils"
-	log "github.com/sirupsen/logrus"
 )
 
 const SchemaVersion string = "v1"
 
 // LogDumpContainer holds the request and response data for a given flow
 type LogDumpContainer struct {
-	SchemaVersion     string   `json:"schema,omitempty"`
-	RequestHeaders    string   `json:"request_headers"`
-	RequestBody       string   `json:"request_body"`
-	ResponseHeaders   string   `json:"response_headers"`
-	ResponseBody      string   `json:"response_body"`
-	filterReqHeaders  []string `json:"-"`
-	filterRespHeaders []string `json:"-"`
-	flow              *px.Flow `json:"-"`
+	SchemaVersion     string                    `json:"schema,omitempty"`
+	Timestamp         time.Time                 `json:"timestamp,omitempty"`
+	ConnectionStats   *ConnectionStatsContainer `json:"connection_stats,omitempty"`
+	RequestHeaders    string                    `json:"request_headers"`
+	RequestBody       string                    `json:"request_body"`
+	ResponseHeaders   string                    `json:"response_headers"`
+	ResponseBody      string                    `json:"response_body"`
+	filterReqHeaders  []string                  `json:"-"`
+	filterRespHeaders []string                  `json:"-"`
+	flow              *px.Flow                  `json:"-"`
 }
 
 func (d *LogDumpContainer) loadRequestHeaders() error {
@@ -131,15 +135,21 @@ func validateFlowObj(f *px.Flow, logSources config.LogSourceConfig) config.LogSo
 }
 
 // NewLogDumpContainer returns a LogDumpContainer with *only* the fields requested in logSources populated
-func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, filterReqHeaders, filterRespHeaders []string) *LogDumpContainer {
+func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt int64, filterReqHeaders, filterRespHeaders []string) *LogDumpContainer {
 	logSources = validateFlowObj(&f, logSources) // disable logging of fields that are not present in the flow
 	dumpContainer := &LogDumpContainer{
 		SchemaVersion:     SchemaVersion,
+		Timestamp:         time.Now(),
 		flow:              &f,
 		filterReqHeaders:  filterReqHeaders,
 		filterRespHeaders: filterRespHeaders,
 	}
 	errors := make([]error, 0)
+
+	if logSources.LogConnectionStats {
+		log.Debug("Dumping connection stats")
+		dumpContainer.ConnectionStats = NewConnectionStatusContainerWithDuration(f, doneAt)
+	}
 
 	if logSources.LogRequestHeaders {
 		log.Debug("Dumping request headers")

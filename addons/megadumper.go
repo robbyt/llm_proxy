@@ -2,6 +2,7 @@ package addons
 
 import (
 	"fmt"
+	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
@@ -25,10 +26,14 @@ type MegaDumpAddon struct {
 // Requestheaders is a callback that will receive a "flow" from the proxy, will create a
 // NewLogDumpContainer and will use the embedded writers to finally write the log.
 func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
+	start := time.Now()
+
 	go func() {
 		<-f.Done()
+		doneAt := time.Since(start).Milliseconds()
+
 		// load the selected fields into a container object
-		dumpContainer := schema.NewLogDumpContainer(*f, d.logSources, d.filterReqHeaders, d.filterRespHeaders)
+		dumpContainer := schema.NewLogDumpContainer(*f, d.logSources, doneAt, d.filterReqHeaders, d.filterRespHeaders)
 
 		id := f.Id.String() // TODO: is the internal request ID unique enough?
 
