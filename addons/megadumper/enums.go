@@ -31,4 +31,7 @@ const (
 
 	// WriteToDir logs to a directory
 	WriteToDir
+
+	// WriteToStdOut logs to standard out
+	WriteToStdOut
 )

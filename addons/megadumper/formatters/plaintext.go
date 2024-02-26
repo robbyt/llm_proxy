@@ -3,7 +3,7 @@ package formatters
 import (
 	"bytes"
 
-	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
+	"github.com/robbyt/llm_proxy/schema"
 )
 
 type PlainText struct {

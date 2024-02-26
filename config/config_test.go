@@ -11,7 +11,7 @@ func TestConfig_SetLoggerLevel_ImplicitCallToSetLoggerLevel(t *testing.T) {
 
 	assert.Nil(t, cfg.terminalLogger)
 
-	assert.Equal(t, 0, cfg.GetDebugLevel())
+	assert.Equal(t, 0, cfg.IsDebugEnabled())
 	assert.Equal(t, true, cfg.logLevelHasBeenSet)
 }
 

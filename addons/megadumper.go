@@ -2,15 +2,16 @@ package addons
 
 import (
 	"fmt"
+	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
 	md "github.com/robbyt/llm_proxy/addons/megadumper"
 	"github.com/robbyt/llm_proxy/addons/megadumper/formatters"
-	"github.com/robbyt/llm_proxy/addons/megadumper/schema"
 	"github.com/robbyt/llm_proxy/addons/megadumper/writers"
 	"github.com/robbyt/llm_proxy/config"
+	"github.com/robbyt/llm_proxy/schema"
 )
 
 type MegaDumpAddon struct {
@@ -22,12 +23,17 @@ type MegaDumpAddon struct {
 	filterRespHeaders []string
 }
 
-// Requestheaders is a callback for the Requestheaders event
+// Requestheaders is a callback that will receive a "flow" from the proxy, will create a
+// NewLogDumpContainer and will use the embedded writers to finally write the log.
 func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
+	start := time.Now()
+
 	go func() {
 		<-f.Done()
+		doneAt := time.Since(start).Milliseconds()
+
 		// load the selected fields into a container object
-		dumpContainer := schema.NewLogDumpContainer(*f, d.logSources, d.filterReqHeaders, d.filterRespHeaders)
+		dumpContainer := schema.NewLogDumpContainer(*f, d.logSources, doneAt, d.filterReqHeaders, d.filterRespHeaders)
 
 		id := f.Id.String() // TODO: is the internal request ID unique enough?
 
@@ -44,12 +50,11 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 				log.Error("Writer is nil, skipping")
 				continue
 			}
-			bytesWritten, err := w.Write(id, formattedDump)
+			_, err := w.Write(id, formattedDump)
 			if err != nil {
 				log.Error(err)
 				continue
 			}
-			log.Debugf("Writer %v wrote %v bytes for %v", w, bytesWritten, id)
 		}
 	}()
 }
@@ -93,7 +98,13 @@ func NewMegaDirDumper(
 				return nil, err
 			}
 			w = append(w, fileWriter)
-
+		case md.WriteToStdOut:
+			log.Debug("Standard out logger enabled")
+			stdoutWriter, err := writers.NewToStdOut()
+			if err != nil {
+				return nil, err
+			}
+			w = append(w, stdoutWriter)
 		default:
 			return nil, fmt.Errorf("invalid log destination: %v", logDest)
 		}

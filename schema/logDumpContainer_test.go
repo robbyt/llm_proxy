@@ -1,16 +1,23 @@
 package schema
 
 import (
+	"net/url"
 	"testing"
 
 	px "github.com/kardianos/mitmproxy/proxy"
-	"github.com/robbyt/llm_proxy/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/robbyt/llm_proxy/config"
 )
 
 func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 	flow := &px.Flow{
 		Request: &px.Request{
+			URL: &url.URL{
+				Scheme: "http",
+				Host:   "example.com",
+				Path:   "/",
+			},
 			Header: map[string][]string{
 				"Content-Type": {"[application/json]"},
 			},
@@ -25,25 +32,25 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 	}
 	var container *LogDumpContainer
 
-	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogRequestHeaders: true}, []string{}, []string{})
+	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogRequestHeaders: true}, 0, []string{}, []string{})
 	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeaders)
 	assert.Equal(t, "", container.RequestBody)
 	assert.Equal(t, "", container.ResponseHeaders)
 	assert.Equal(t, "", container.ResponseBody)
 
-	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogRequestBody: true}, []string{}, []string{})
+	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogRequestBody: true}, 0, []string{}, []string{})
 	assert.Equal(t, "", container.RequestHeaders)
 	assert.Equal(t, `{"key": "value"}`, container.RequestBody)
 	assert.Equal(t, "", container.ResponseHeaders)
 	assert.Equal(t, "", container.ResponseBody)
 
-	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogResponseHeaders: true}, []string{}, []string{})
+	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogResponseHeaders: true}, 0, []string{}, []string{})
 	assert.Equal(t, "", container.RequestHeaders)
 	assert.Equal(t, "", container.RequestBody)
 	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeaders)
 	assert.Equal(t, "", container.ResponseBody)
 
-	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogResponseBody: true}, []string{}, []string{})
+	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogResponseBody: true}, 0, []string{}, []string{})
 	assert.Equal(t, "", container.RequestHeaders)
 	assert.Equal(t, "", container.RequestBody)
 	assert.Equal(t, "", container.ResponseHeaders)
@@ -57,6 +64,7 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			LogResponseHeaders: true,
 			LogResponseBody:    true,
 		},
+		0,
 		[]string{},
 		[]string{},
 	)

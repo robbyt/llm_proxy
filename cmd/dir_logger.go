@@ -34,6 +34,10 @@ func init() {
 		"Directory to write logs",
 	)
 	dirLoggerCmd.Flags().BoolVarP(
+		&cfg.NoLogConnStats, "no-log-connection-stats", "", cfg.NoLogConnStats,
+		"Don't log connection stats",
+	)
+	dirLoggerCmd.Flags().BoolVarP(
 		&cfg.NoLogReqHeaders, "no-log-req-headers", "", cfg.NoLogReqHeaders,
 		"Don't log request headers",
 	)

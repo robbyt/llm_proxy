@@ -54,7 +54,9 @@ func newProxy(debugLevel int, listenOn string, skipVerifyTLS bool, ca *cert.CA) 
 
 // Run is the main entry point for the proxy, full of imperative code, config processing, and error handling
 func Run(cfg *config.Config) error {
-	debugLevel := cfg.GetDebugLevel()
+	// create a slice of LogDestination objects, which are used to configure the MegaDirDumper addon
+	logDest := []md.LogDestination{}
+	debugLevel := cfg.IsDebugEnabled()
 
 	ca, err := newCA(cfg.CertDir)
 	if err != nil {
@@ -66,40 +68,40 @@ func Run(cfg *config.Config) error {
 		return fmt.Errorf("failed to create proxy: %v", err)
 	}
 
-	if debugLevel > 0 {
-		log.Debugf("Debug level is set to %v, enabling traffic logging to terminal", debugLevel)
+	if cfg.IsVerboseOrHigher() {
+		log.Debugf("Enabling traffic logging to terminal")
+		logDest = append(logDest, md.WriteToStdOut)
 		p.AddAddon(addons.NewStdOutLogger())
 	}
 
-	if cfg.NoHttpUpgrader {
-		log.Debug("NoHttpUpgrader is true, not upgrading http requests to https")
-	} else {
+	if !cfg.NoHttpUpgrader {
 		// upgrade all http requests to https
 		log.Debug("NoHttpUpgrader is false, enabling http to https upgrade")
 		p.AddAddon(&addons.SchemeUpgrader{})
 	}
 
-	if cfg.OutputDir == "" {
-		log.Debug("OutputDir is empty, skipping the traffic dump")
-	} else {
+	if cfg.OutputDir != "" {
 		log.Debugf("OutputDir is set, dumping traffic to: %v", cfg.OutputDir)
 
 		// creates a formatted []LogSource containing various enum settings, pulled from the bools set in the config
 		logSources := config.LogSourceConfig{
+			LogConnectionStats: !cfg.NoLogConnStats,
 			LogRequestHeaders:  !cfg.NoLogReqHeaders,
 			LogRequestBody:     !cfg.NoLogReqBody,
 			LogResponseHeaders: !cfg.NoLogRespHeaders,
 			LogResponseBody:    !cfg.NoLogRespBody,
 		}
-
 		log.Debugf("Will log these fields: %v", logSources)
+
+		// append the WriteToDir LogDestination to the logDest slice, so megadumper will write to disk
+		logDest = append(logDest, md.WriteToDir)
 
 		// create and configure MegaDirDumper addon object
 		dumper, err := addons.NewMegaDirDumper(
 			cfg.OutputDir,
 			md.Format_JSON,
 			logSources,
-			[]md.LogDestination{md.WriteToDir},
+			logDest,
 			cfg.FilterReqHeaders, cfg.FilterRespHeaders,
 		)
 		if err != nil {
