@@ -17,9 +17,8 @@ func (pt *PlainText) flatten() ([]byte, error) {
 
 	buf := new(bytes.Buffer)
 
-	if pt.container.RequestHeaders != "" {
-		buf.WriteString(pt.container.RequestHeaders)
-		buf.WriteString("\r\n")
+	if pt.container.RequestHeaders != nil {
+		buf.WriteString(pt.container.RequestHeadersString())
 	}
 
 	if pt.container.RequestBody != "" {
@@ -27,9 +26,8 @@ func (pt *PlainText) flatten() ([]byte, error) {
 		buf.WriteString("\r\n")
 	}
 
-	if pt.container.ResponseHeaders != "" {
-		buf.WriteString(pt.container.ResponseHeaders)
-		buf.WriteString("\r\n")
+	if pt.container.ResponseHeaders != nil {
+		buf.WriteString(pt.container.ResponseHeadersString())
 	}
 
 	if pt.container.ResponseBody != "" {
