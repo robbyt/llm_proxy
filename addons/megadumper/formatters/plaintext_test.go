@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/robbyt/llm_proxy/schema"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +25,6 @@ func TestPlainText_flatten(t *testing.T) {
 
 	result, err := pt.flatten()
 	assert.NoError(t, err)
-	spew.Dump(result)
 	assert.Equal(t, expectedResult, result)
 }
 
