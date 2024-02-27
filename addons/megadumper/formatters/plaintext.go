@@ -17,21 +17,21 @@ func (pt *PlainText) flatten() ([]byte, error) {
 
 	buf := new(bytes.Buffer)
 
-	if pt.container.RequestHeaders != nil {
-		buf.WriteString(pt.container.RequestHeadersString())
+	if pt.container.Request.Headers != nil {
+		buf.WriteString(pt.container.Request.HeadersString())
 	}
 
-	if pt.container.RequestBody != "" {
-		buf.WriteString(pt.container.RequestBody)
+	if pt.container.Request.Body != "" {
+		buf.WriteString(pt.container.Request.Body)
 		buf.WriteString("\r\n")
 	}
 
-	if pt.container.ResponseHeaders != nil {
-		buf.WriteString(pt.container.ResponseHeadersString())
+	if pt.container.Response.Headers != nil {
+		buf.WriteString(pt.container.Response.HeadersString())
 	}
 
-	if pt.container.ResponseBody != "" {
-		buf.WriteString(pt.container.ResponseBody)
+	if pt.container.Response.Body != "" {
+		buf.WriteString(pt.container.Response.Body)
 		buf.WriteString("\r\n")
 	}
 

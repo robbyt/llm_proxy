@@ -34,28 +34,28 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 	var container *LogDumpContainer
 
 	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogRequestHeaders: true}, 0, []string{}, []string{})
-	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeadersString())
-	assert.Equal(t, "", container.RequestBody)
-	assert.Equal(t, "", container.ResponseHeadersString())
-	assert.Equal(t, "", container.ResponseBody)
+	assert.Equal(t, "Content-Type: [application/json]\r\n", container.Request.HeadersString())
+	assert.Equal(t, "", container.Request.Body)
+	assert.Equal(t, "", container.Response.HeadersString())
+	assert.Equal(t, "", container.Response.Body)
 
 	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogRequestBody: true}, 0, []string{}, []string{})
-	assert.Equal(t, "", container.RequestHeadersString())
-	assert.Equal(t, `{"key": "value"}`, container.RequestBody)
-	assert.Equal(t, "", container.ResponseHeadersString())
-	assert.Equal(t, "", container.ResponseBody)
+	assert.Equal(t, "", container.Request.HeadersString())
+	assert.Equal(t, `{"key": "value"}`, container.Request.Body)
+	assert.Equal(t, "", container.Response.HeadersString())
+	assert.Equal(t, "", container.Response.Body)
 
 	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogResponseHeaders: true}, 0, []string{}, []string{})
-	assert.Equal(t, "", container.RequestHeadersString())
-	assert.Equal(t, "", container.RequestBody)
-	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeadersString())
-	assert.Equal(t, "", container.ResponseBody)
+	assert.Equal(t, "", container.Request.HeadersString())
+	assert.Equal(t, "", container.Request.Body)
+	assert.Equal(t, "Content-Type: [application/json]\r\n", container.Response.HeadersString())
+	assert.Equal(t, "", container.Response.Body)
 
 	container = NewLogDumpContainer(*flow, config.LogSourceConfig{LogResponseBody: true}, 0, []string{}, []string{})
-	assert.Equal(t, "", container.RequestHeadersString())
-	assert.Equal(t, "", container.RequestBody)
-	assert.Equal(t, "", container.ResponseHeadersString())
-	assert.Equal(t, `{"status": "success"}`, container.ResponseBody)
+	assert.Equal(t, "", container.Request.HeadersString())
+	assert.Equal(t, "", container.Request.Body)
+	assert.Equal(t, "", container.Response.HeadersString())
+	assert.Equal(t, `{"status": "success"}`, container.Response.Body)
 
 	container = NewLogDumpContainer(
 		*flow,
@@ -69,10 +69,10 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 		[]string{},
 		[]string{},
 	)
-	assert.Equal(t, "Content-Type: [application/json]\r\n", container.RequestHeadersString())
-	assert.Equal(t, `{"key": "value"}`, container.RequestBody)
-	assert.Equal(t, "Content-Type: [application/json]\r\n", container.ResponseHeadersString())
-	assert.Equal(t, `{"status": "success"}`, container.ResponseBody)
+	assert.Equal(t, "Content-Type: [application/json]\r\n", container.Request.HeadersString())
+	assert.Equal(t, `{"key": "value"}`, container.Request.Body)
+	assert.Equal(t, "Content-Type: [application/json]\r\n", container.Response.HeadersString())
+	assert.Equal(t, `{"status": "success"}`, container.Response.Body)
 
 }
 

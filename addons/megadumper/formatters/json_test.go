@@ -11,27 +11,27 @@ import (
 
 func TestJSONFormatter(t *testing.T) {
 	container := &schema.LogDumpContainer{
-		RequestHeaders:  http.Header{"Header": []string{"Value"}},
-		RequestBody:     "Request Body",
-		ResponseHeaders: http.Header{"Header": []string{"Value"}},
-		ResponseBody:    "Response Body",
+		Request: &schema.TrafficObject{
+			Headers: http.Header{"ReqHeader": []string{"ReqValue"}},
+			Body:    "Request Body",
+		},
+		Response: &schema.TrafficObject{
+			Headers: http.Header{"RespHeader": []string{"RespValue"}},
+			Body:    "Response Body",
+		},
 	}
 	j := &JSON{}
 
 	expectedJSON := `{
 	  "timestamp": "0001-01-01T00:00:00Z",
-	  "request_headers": {
-	    "Header": [
-		  "Value"
-		]
+	  "request": {
+		"body": "Request Body",
+		"headers": { "ReqHeader": [ "ReqValue" ] }
 	  },
-	  "request_body": "Request Body",
-	  "response_headers": {
-		"Header": [
-		  "Value"
-	    ]
-	  },
-	  "response_body": "Response Body"
+	  "response": {
+		"body": "Response Body",
+		"headers": { "RespHeader": [ "RespValue" ] }
+	  }
 	}`
 
 	jsonBytes, err := j.Read(container)
@@ -45,22 +45,39 @@ func TestJSONFormatter(t *testing.T) {
 	err = json.Unmarshal([]byte(expectedJSON), &expectedParsedJSON)
 	assert.NoError(t, err)
 
-	assert.Equal(t, expectedParsedJSON, parsedJSON)
+	keys := []string{"timestamp", "request", "response"}
+	for _, key := range keys {
+		parsedValue, ok := parsedJSON[key]
+		if ok {
+			expectedValue, ok := expectedParsedJSON[key]
+			if ok {
+				assert.Equal(t, expectedValue, parsedValue)
+			} else {
+				t.Errorf("Expected to find %s in expectedParsedJSON", key)
+			}
+		} else {
+			t.Errorf("Expected to find %s in parsedJSON", key)
+		}
+	}
 }
 
 func TestJSONFormatter_Empty(t *testing.T) {
 	container := &schema.LogDumpContainer{
-		RequestHeaders:  http.Header{},
-		ResponseHeaders: http.Header{},
+		Request:  &schema.TrafficObject{},
+		Response: &schema.TrafficObject{},
 	}
 	j := &JSON{}
 	expectedJSON := `{
-	  "timestamp": "0001-01-01T00:00:00Z",
-	  "request_headers": {},
-	  "request_body": "",
-	  "response_headers": {},
-	  "response_body": ""
-	}`
+		"timestamp": "0001-01-01T00:00:00Z",
+		"request": {
+			"body": "",
+			"headers": null
+		},
+		"response": {
+			"body": "",
+			"headers": null
+		}
+	  }`
 
 	jsonBytes, err := j.Read(container)
 	assert.NoError(t, err)
@@ -73,7 +90,7 @@ func TestJSONFormatter_Empty(t *testing.T) {
 	err = json.Unmarshal([]byte(expectedJSON), &expectedParsedJSON)
 	assert.NoError(t, err)
 
-	keys := []string{"timestamp", "request_headers", "request_body", "response_headers", "response_body"}
+	keys := []string{"timestamp", "request", "response"}
 	for _, key := range keys {
 		parsedValue, ok := parsedJSON[key]
 		if ok {

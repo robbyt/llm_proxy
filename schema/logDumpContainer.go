@@ -15,50 +15,52 @@ import (
 
 const SchemaVersion string = "v1"
 
-// LogDumpContainer holds the request and response data for a given flow
-type LogDumpContainer struct {
-	SchemaVersion     string                    `json:"schema,omitempty"`
-	Timestamp         time.Time                 `json:"timestamp,omitempty"`
-	ConnectionStats   *ConnectionStatsContainer `json:"connection_stats,omitempty"`
-	RequestHeaders    http.Header               `json:"request_headers"`
-	RequestBody       string                    `json:"request_body"`
-	ResponseHeaders   http.Header               `json:"response_headers"`
-	ResponseBody      string                    `json:"response_body"`
-	filterReqHeaders  []string                  `json:"-"`
-	filterRespHeaders []string                  `json:"-"`
-	flow              *px.Flow                  `json:"-"`
+type TrafficObject struct {
+	Headers         http.Header `json:"headers"`
+	Body            string      `json:"body"`
+	headersToFilter []string    `json:"-"`
 }
 
-func (d *LogDumpContainer) loadRequestHeaders() {
-	d.RequestHeaders = d.flow.Request.Header
-}
-
-func (d *LogDumpContainer) RequestHeadersString() string {
+// HeadersString returns the headers as a flat string
+func (t *TrafficObject) HeadersString() string {
 	buf := new(bytes.Buffer)
-	if err := d.RequestHeaders.WriteSubset(buf, nil); err != nil {
+	if err := t.Headers.WriteSubset(buf, nil); err != nil {
 		return ""
 	}
 	return buf.String()
+}
+
+func (t *TrafficObject) filterHeaders() {
+	log.Debugf("Filtering headers from log output: %v", t.headersToFilter)
+	for _, header := range t.headersToFilter {
+		t.Headers.Del(header)
+	}
+}
+
+// LogDumpContainer holds the request and response data for a given flow
+type LogDumpContainer struct {
+	SchemaVersion   string                    `json:"schema,omitempty"`
+	Timestamp       time.Time                 `json:"timestamp,omitempty"`
+	ConnectionStats *ConnectionStatsContainer `json:"connection_stats,omitempty"`
+	Request         *TrafficObject            `json:"request,omitempty"`
+	Response        *TrafficObject            `json:"response,omitempty"`
+	flow            *px.Flow                  `json:"-"`
+}
+
+func (d *LogDumpContainer) loadRequestHeaders() {
+	d.Request.Headers = d.flow.Request.Header
 }
 
 func (d *LogDumpContainer) loadRequestBody() error {
 	// TODO CanPrint converts to a string, so there's no point in doing it twice
 	if utils.CanPrint(d.flow.Request.Body) {
-		d.RequestBody = string(d.flow.Request.Body)
+		d.Request.Body = string(d.flow.Request.Body)
 	}
 	return nil
 }
 
 func (d *LogDumpContainer) loadResponseHeaders() {
-	d.ResponseHeaders = d.flow.Response.Header
-}
-
-func (d *LogDumpContainer) ResponseHeadersString() string {
-	buf := new(bytes.Buffer)
-	if err := d.ResponseHeaders.WriteSubset(buf, nil); err != nil {
-		return ""
-	}
-	return buf.String()
+	d.Response.Headers = d.flow.Response.Header
 }
 
 func (d *LogDumpContainer) loadResponseBody() error {
@@ -76,27 +78,9 @@ func (d *LogDumpContainer) loadResponseBody() error {
 	}
 
 	if body != nil {
-		d.ResponseBody = string(body)
+		d.Response.Body = string(body)
 	}
 	return nil
-}
-
-func (d *LogDumpContainer) runResponseHeadersFilter() {
-	if d.flow.Response != nil && d.flow.Response.Header != nil {
-		log.Debugf("Filtering response headers from log output: %v", d.filterRespHeaders)
-		for _, header := range d.filterRespHeaders {
-			d.flow.Response.Header.Del(header)
-		}
-	}
-}
-
-func (d *LogDumpContainer) runRequestHeadersFilter() {
-	if d.flow.Request != nil && d.flow.Request.Header != nil {
-		log.Debugf("Filtering request headers from log output: %v", d.filterReqHeaders)
-		for _, header := range d.filterReqHeaders {
-			d.flow.Request.Header.Del(header)
-		}
-	}
 }
 
 // validateFlowObj checks if various fields in the f flow are populated, and adjusts the logSources object accordingly
@@ -143,11 +127,11 @@ func validateFlowObj(f *px.Flow, logSources config.LogSourceConfig) config.LogSo
 func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt int64, filterReqHeaders, filterRespHeaders []string) *LogDumpContainer {
 	logSources = validateFlowObj(&f, logSources) // disable logging of fields that are not present in the flow
 	dumpContainer := &LogDumpContainer{
-		SchemaVersion:     SchemaVersion,
-		Timestamp:         time.Now(),
-		flow:              &f,
-		filterReqHeaders:  filterReqHeaders,
-		filterRespHeaders: filterRespHeaders,
+		SchemaVersion: SchemaVersion,
+		Timestamp:     time.Now(),
+		flow:          &f,
+		Request:       &TrafficObject{headersToFilter: filterReqHeaders},
+		Response:      &TrafficObject{headersToFilter: filterRespHeaders},
 	}
 	errors := make([]error, 0)
 
@@ -159,8 +143,8 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 	if logSources.LogRequestHeaders {
 		log.Debug("Dumping request headers")
 		if dumpContainer.flow.Request != nil && dumpContainer.flow.Request.Header != nil {
-			dumpContainer.runRequestHeadersFilter()
 			dumpContainer.loadRequestHeaders()
+			dumpContainer.Request.filterHeaders()
 		}
 	}
 
@@ -175,8 +159,8 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 	if logSources.LogResponseHeaders {
 		log.Debug("Dumping response headers")
 		if dumpContainer.flow.Response != nil && dumpContainer.flow.Response.Header != nil {
-			dumpContainer.runResponseHeadersFilter()
 			dumpContainer.loadResponseHeaders()
+			dumpContainer.Response.filterHeaders()
 		}
 	}
 
