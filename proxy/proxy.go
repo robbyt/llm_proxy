@@ -91,7 +91,6 @@ func Run(cfg *config.Config) error {
 			LogResponseHeaders: !cfg.NoLogRespHeaders,
 			LogResponseBody:    !cfg.NoLogRespBody,
 		}
-		log.Debugf("Will log these fields: %v", logSources)
 
 		// append the WriteToDir LogDestination to the logDest slice, so megadumper will write to disk
 		logDest = append(logDest, md.WriteToDir)
