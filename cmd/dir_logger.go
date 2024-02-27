@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/robbyt/llm_proxy/config"
 	"github.com/robbyt/llm_proxy/proxy"
 )
 
@@ -16,6 +17,7 @@ Each request/response pair will be written to a file, identified by a unique ID.
 will contain the request and response in JSON format.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		cfg.AppMode = config.DirLoggerMode
 		err := proxy.Run(cfg)
 		if err != nil {
 			log.Fatal(err)

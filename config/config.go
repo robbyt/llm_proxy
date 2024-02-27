@@ -2,6 +2,7 @@ package config
 
 // Config is the main config mega-struct
 type Config struct {
+	AppMode AppMode
 	*httpBehavior
 	*terminalLogger
 	*trafficLogger

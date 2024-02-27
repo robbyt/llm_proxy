@@ -52,20 +52,20 @@ func newProxy(debugLevel int, listenOn string, skipVerifyTLS bool, ca *cert.CA) 
 	return p, nil
 }
 
-// Run is the main entry point for the proxy, full of imperative code, config processing, and error handling
-func Run(cfg *config.Config) error {
+// configProxy is the main entry point for the proxy, full of imperative code, config processing, and error handling
+func configProxy(cfg *config.Config) (*px.Proxy, error) {
 	// create a slice of LogDestination objects, which are used to configure the MegaDirDumper addon
 	logDest := []md.LogDestination{}
 	debugLevel := cfg.IsDebugEnabled()
 
 	ca, err := newCA(cfg.CertDir)
 	if err != nil {
-		return fmt.Errorf("setupCA error: %v", err)
+		return nil, fmt.Errorf("setupCA error: %v", err)
 	}
 
 	p, err := newProxy(debugLevel, cfg.Listen, cfg.InsecureSkipVerifyTLS, ca)
 	if err != nil {
-		return fmt.Errorf("failed to create proxy: %v", err)
+		return nil, fmt.Errorf("failed to create proxy: %v", err)
 	}
 
 	if cfg.IsVerboseOrHigher() {
@@ -80,10 +80,14 @@ func Run(cfg *config.Config) error {
 		p.AddAddon(&addons.SchemeUpgrader{})
 	}
 
-	if cfg.OutputDir != "" {
-		log.Debugf("OutputDir is set, dumping traffic to: %v", cfg.OutputDir)
+	switch cfg.AppMode {
+	case config.MockMode:
+		log.Debugf("AppMode is MockMode, adding mock/cache addon")
+		// p.AddAddon(addons.NewMockCache(cfg.OutputDir, cfg.FilterReqHeaders, cfg.FilterRespHeaders))
+	case config.DirLoggerMode:
+		log.Debugf("AppMode is DirLoggerMode, dumping traffic to: %v", cfg.OutputDir)
 
-		// creates a formatted []LogSource containing various enum settings, pulled from the bools set in the config
+		// struct of bools to toggle the various log outputs
 		logSources := config.LogSourceConfig{
 			LogConnectionStats: !cfg.NoLogConnStats,
 			LogRequestHeaders:  !cfg.NoLogReqHeaders,
@@ -104,13 +108,22 @@ func Run(cfg *config.Config) error {
 			cfg.FilterReqHeaders, cfg.FilterRespHeaders,
 		)
 		if err != nil {
-			return fmt.Errorf("failed to create dumper: %v", err)
+			return nil, fmt.Errorf("failed to create dumper: %v", err)
 		}
 
 		// add the dumper to the proxy
 		p.AddAddon(dumper)
+	case config.SimpleMode:
+		log.Debugf("AppMode is SimpleMode, no addons will be added")
+	default:
+		return nil, fmt.Errorf("unknown app mode: %v", cfg.AppMode)
 	}
 
+	return p, nil
+}
+
+// startProxy receives a pointer to a proxy object, runs it, and handles the shutdown signal
+func startProxy(p *px.Proxy) error {
 	// setup background signal handler for clean shutdown
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
@@ -120,10 +133,8 @@ func Run(cfg *config.Config) error {
 		p.Shutdown(context.TODO())
 	}()
 
-	// log.Infof("Starting proxy on: %v", cfg.Listen)
-
 	// block here while the proxy is running
-	err = p.Start()
+	err := p.Start()
 	if err != nil {
 		/*
 			when `p` gets a shutdown signal, it returns with an error "http: Server closed"
@@ -131,8 +142,23 @@ func Run(cfg *config.Config) error {
 			A string compare is ugly, but I can't find where the shutdown error obj is defined.
 		*/
 		if err.Error() != "http: Server closed" {
-			return fmt.Errorf("failed to start proxy: %v", err)
+			return err
 		}
+	}
+
+	return nil
+}
+
+// Run is the main entry point for the proxy, configures the proxy and runs it
+func Run(cfg *config.Config) error {
+	p, err := configProxy(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to configure proxy: %v", err)
+	}
+
+	err = startProxy(p)
+	if err != nil {
+		return fmt.Errorf("failed to start proxy: %v", err)
 	}
 
 	return nil

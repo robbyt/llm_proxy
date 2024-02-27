@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/robbyt/llm_proxy/config"
 	"github.com/robbyt/llm_proxy/proxy"
 )
 
@@ -14,7 +15,7 @@ var simpleCmd = &cobra.Command{
 	Long: `Useful as a simple proxy, or as a base for a more complex proxy.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg.OutputDir = "" // disable logging to dir
+		cfg.AppMode = config.SimpleMode
 		err := proxy.Run(cfg)
 		if err != nil {
 			log.Fatal(err)
