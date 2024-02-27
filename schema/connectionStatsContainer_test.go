@@ -21,7 +21,7 @@ func TestLogStdOutLine_toJSONstr(t *testing.T) {
 		ResponseContentType: "text/plain",
 	}
 
-	expected := `{"client_address":"127.0.0.1","method":"GET","url":"http://example.com","status_code":200,"content_length":13,"duration_ms":100,"response_content_type":"text/plain"}`
+	expected := `{"client_address":"127.0.0.1","method":"GET","url":"http://example.com","response_code":200,"content_length":13,"duration_ms":100,"response_content_type":"text/plain"}`
 	assert.Equal(t, expected, line.ToJSONstr())
 }
 
