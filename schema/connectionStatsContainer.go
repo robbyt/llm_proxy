@@ -13,12 +13,11 @@ type ConnectionStatsContainer struct {
 	ClientAddress       string `json:"client_address"`
 	Method              string `json:"method"`
 	URL                 string `json:"url"`
-	StatusCode          int    `json:"status_code"`
+	ResponseCode        int    `json:"response_code"`
 	ContentLength       int    `json:"content_length"`
 	Duration            int64  `json:"duration_ms"`
 	ResponseContentType string `json:"response_content_type,omitempty"`
-	// XreqID        string `json:"x_request_id,omitempty"`
-	ProxyID string `json:"proxy_id,omitempty"`
+	ProxyID             string `json:"proxy_id,omitempty"`
 }
 
 func (obj *ConnectionStatsContainer) ToJSON() []byte {
@@ -55,7 +54,7 @@ func newConnectionStatusContainer(f *px.Flow) *ConnectionStatsContainer {
 	}
 
 	if f.Response != nil {
-		logOutput.StatusCode = f.Response.StatusCode
+		logOutput.ResponseCode = f.Response.StatusCode
 	}
 
 	if f.Response != nil && f.Response.Body != nil {

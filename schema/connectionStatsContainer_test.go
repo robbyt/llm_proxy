@@ -15,7 +15,7 @@ func TestLogStdOutLine_toJSONstr(t *testing.T) {
 		ClientAddress:       "127.0.0.1",
 		Method:              "GET",
 		URL:                 "http://example.com",
-		StatusCode:          200,
+		ResponseCode:        200,
 		ContentLength:       13,
 		Duration:            100,
 		ResponseContentType: "text/plain",
@@ -45,7 +45,7 @@ func TestNewLogLine(t *testing.T) {
 	assert.Equal(t, "unknown", logLine.ClientAddress)
 	assert.Equal(t, "GET", logLine.Method)
 	assert.Equal(t, "https://example.com/testpath", logLine.URL)
-	assert.Equal(t, 200, logLine.StatusCode)
+	assert.Equal(t, 200, logLine.ResponseCode)
 	assert.Equal(t, "application/json", logLine.ResponseContentType)
 	assert.Equal(t, f.Id.String(), logLine.ProxyID)
 	assert.Equal(t, int64(100), logLine.Duration)
