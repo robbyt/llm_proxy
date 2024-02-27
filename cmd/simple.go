@@ -14,6 +14,7 @@ var simpleCmd = &cobra.Command{
 	Long: `Useful as a simple proxy, or as a base for a more complex proxy.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		cfg.OutputDir = "" // disable logging to dir
 		err := proxy.Run(cfg)
 		if err != nil {
 			log.Fatal(err)
