@@ -38,6 +38,7 @@ func newCA(certDir string) (*cert.CA, error) {
 	return ca, nil
 }
 
+// newProxy returns a new proxy object with some basic configuration
 func newProxy(debugLevel int, listenOn string, skipVerifyTLS bool, ca *cert.CA) (*px.Proxy, error) {
 	opts := &px.Options{
 		Debug:                 debugLevel,
@@ -54,18 +55,18 @@ func newProxy(debugLevel int, listenOn string, skipVerifyTLS bool, ca *cert.CA) 
 	return p, nil
 }
 
-// configProxy is the main entry point for the proxy, full of imperative code, config processing, and error handling
+// configProxy returns a configured proxy object w/ addons. This proxy still needs to be "started"
+// with a blocking call to .Start() (which is handled elsewhere)
 func configProxy(cfg *config.Config) (*px.Proxy, error) {
 	// create a slice of LogDestination objects, which are used to configure the MegaDirDumper addon
 	logDest := []md.LogDestination{}
-	debugLevel := cfg.IsDebugEnabled()
 
 	ca, err := newCA(cfg.CertDir)
 	if err != nil {
 		return nil, fmt.Errorf("setupCA error: %v", err)
 	}
 
-	p, err := newProxy(debugLevel, cfg.Listen, cfg.InsecureSkipVerifyTLS, ca)
+	p, err := newProxy(cfg.IsDebugEnabled(), cfg.Listen, cfg.InsecureSkipVerifyTLS, ca)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proxy: %v", err)
 	}
@@ -82,13 +83,50 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 		p.AddAddon(&addons.SchemeUpgrader{})
 	}
 
+	log.Debugf("AppMode set to: %v", cfg.AppMode)
 	switch cfg.AppMode {
-	case config.MockMode:
-		log.Debugf("AppMode is MockMode, adding mock/cache addon")
-		// p.AddAddon(addons.NewMockCache(cfg.OutputDir, cfg.FilterReqHeaders, cfg.FilterRespHeaders))
-	case config.DirLoggerMode:
-		log.Debugf("AppMode is DirLoggerMode, dumping traffic to: %v", cfg.OutputDir)
+	case config.CacheMode:
+		cacheConfig, err := config.NewCacheConfig(cfg.Cache.Dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cache config: %v", err)
+		}
 
+		cacheAddon, err := addons.NewCacheAddon(
+			cacheConfig.StorageEngine,
+			cacheConfig.StoragePath,
+			cfg.FilterReqHeaders,
+			cfg.FilterRespHeaders,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load cache addon: %v", err)
+		}
+		p.AddAddon(cacheAddon)
+
+		/*
+			// logSource object with all fields enabled for caching mode
+			logSources := config.LogSourceConfigAllTrue
+
+			// append the WriteToDir LogDestination to the logDest slice, so megadumper will write to disk
+			logDest = append(logDest, md.WriteToDir)
+
+
+				// create and configure MegaDirDumper addon object
+				dumperAddon, err := addons.NewMegaDirDumper(
+					cfg.OutputDir,
+					md.Format_JSON,
+					logSources,
+					logDest,
+					cfg.FilterReqHeaders, cfg.FilterRespHeaders,
+				)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create dumper: %v", err)
+				}
+
+				// add the dumper to the proxy
+				p.AddAddon(dumperAddon)
+		*/
+
+	case config.DirLoggerMode:
 		// struct of bools to toggle the various log outputs
 		logSources := config.LogSourceConfig{
 			LogConnectionStats: !cfg.NoLogConnStats,
@@ -102,7 +140,7 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 		logDest = append(logDest, md.WriteToDir)
 
 		// create and configure MegaDirDumper addon object
-		dumper, err := addons.NewMegaDirDumper(
+		dumperAddon, err := addons.NewMegaDirDumper(
 			cfg.OutputDir,
 			md.Format_JSON,
 			logSources,
@@ -114,9 +152,9 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 		}
 
 		// add the dumper to the proxy
-		p.AddAddon(dumper)
+		p.AddAddon(dumperAddon)
 	case config.SimpleMode:
-		log.Debugf("AppMode is SimpleMode, no addons will be added")
+		log.Debugf("No addons enabled for SimpleMode")
 	default:
 		return nil, fmt.Errorf("unknown app mode: %v", cfg.AppMode)
 	}
