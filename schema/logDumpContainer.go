@@ -87,12 +87,7 @@ func (d *LogDumpContainer) loadResponseBody() error {
 func validateFlowObj(f *px.Flow, logSources config.LogSourceConfig) config.LogSourceConfig {
 	if f == nil {
 		log.Error("flow is nil, unable to extract data")
-		return config.LogSourceConfig{
-			LogRequestHeaders:  false,
-			LogRequestBody:     false,
-			LogResponseHeaders: false,
-			LogResponseBody:    false,
-		}
+		return config.LogSourceConfig{}
 	}
 
 	// request validation
