@@ -170,8 +170,7 @@ func Run(cfg *config.Config) error {
 		return fmt.Errorf("failed to configure proxy: %v", err)
 	}
 
-	err = startProxy(p)
-	if err != nil {
+	if err := startProxy(p); err != nil {
 		return fmt.Errorf("failed to start proxy: %v", err)
 	}
 
