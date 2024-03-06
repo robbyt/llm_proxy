@@ -2,6 +2,8 @@ package addons
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -21,14 +23,23 @@ type MegaDumpAddon struct {
 	writers           []writers.MegaDumpWriter
 	filterReqHeaders  []string
 	filterRespHeaders []string
+	wg                sync.WaitGroup
+	closed            atomic.Bool
 }
 
 // Requestheaders is a callback that will receive a "flow" from the proxy, will create a
 // NewLogDumpContainer and will use the embedded writers to finally write the log.
 func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
+	if d.closed.Load() {
+		log.Warn("MegaDirDumper is being closed, not logging a request")
+		return
+	}
+
 	start := time.Now()
 
+	d.wg.Add(1) // for blocking this addon during shutdown in .Close()
 	go func() {
+		defer d.wg.Done()
 		<-f.Done()
 		doneAt := time.Since(start).Milliseconds()
 
@@ -57,6 +68,19 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 			}
 		}
 	}()
+}
+
+func (d *MegaDumpAddon) String() string {
+	return "MegaDirDumper"
+}
+
+func (d *MegaDumpAddon) Close() error {
+	if !d.closed.Swap(true) {
+		log.Debug("Waiting for MegaDirDumper shutdown...")
+		d.wg.Wait()
+	}
+
+	return nil
 }
 
 // NewMegaDirDumper creates a new dumper that creates a new log file for each request
@@ -117,6 +141,7 @@ func NewMegaDirDumper(
 		filterReqHeaders:  filterReqHeaders,
 		filterRespHeaders: filterRespHeaders,
 	}
+	mda.closed.Store(false) // initialize the atomic bool with closed = false
 
 	log.Debugf("Created MegaDirDumper with %s sources and %v writer(s)", logSources.String(), len(w))
 

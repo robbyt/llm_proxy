@@ -130,6 +130,20 @@ func startProxy(p *px.Proxy) error {
 	go func() {
 		<-ch
 		log.Info("Received SIGINT, shutting down now...")
+
+		// Then close all of the addon connections
+		for _, addon := range p.Addons {
+			myAddon, ok := addon.(addons.LLM_Addon)
+			if ok {
+				log.Debugf("Closing addon: %s", myAddon)
+				err := myAddon.Close()
+				if err != nil {
+					log.Errorf("Error closing addon: %v", err)
+				}
+			}
+		}
+		// Close the http client/server connections first
+		log.Debug("Closing proxy server...")
 		p.Shutdown(context.TODO())
 	}()
 
