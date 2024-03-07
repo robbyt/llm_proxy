@@ -3,9 +3,11 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/kardianos/mitmproxy/cert"
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -127,6 +129,7 @@ func startProxy(p *px.Proxy) error {
 	// setup background signal handler for clean shutdown
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+
 	go func() {
 		<-ch
 		log.Info("Received SIGINT, shutting down now...")
@@ -144,22 +147,20 @@ func startProxy(p *px.Proxy) error {
 		}
 		// Close the http client/server connections first
 		log.Debug("Closing proxy server...")
-		p.Shutdown(context.TODO())
+
+		// Create a context that will be cancelled after N seconds
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
+		defer cancel()
+
+		if err := p.Shutdown(ctx); err != nil {
+			log.Errorf("Error shutting down proxy server: %v", err)
+		}
 	}()
 
 	// block here while the proxy is running
-	err := p.Start()
-	if err != nil {
-		/*
-			when `p` gets a shutdown signal, it returns with an error "http: Server closed"
-			We want handle that error here, and avoid passing it back up the stack to the caller.
-			A string compare is ugly, but I can't find where the shutdown error obj is defined.
-		*/
-		if err.Error() != "http: Server closed" {
-			return err
-		}
+	if err := p.Start(); err != http.ErrServerClosed {
+		return fmt.Errorf("proxy server error: %v", err)
 	}
-
 	return nil
 }
 
