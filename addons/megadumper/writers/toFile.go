@@ -4,6 +4,7 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/robbyt/llm_proxy/addons/fileUtils"
 	md "github.com/robbyt/llm_proxy/addons/megadumper"
 
 	log "github.com/sirupsen/logrus"
@@ -47,7 +48,7 @@ func newToFile(target string, logFormat md.LogFormat) (*ToFile, error) {
 		fileName = target
 	}
 
-	f, err := createNewFileFromFilename(fileName)
+	f, err := fileUtils.CreateNewFileFromFilename(fileName)
 	if err != nil {
 		return nil, err
 	}
