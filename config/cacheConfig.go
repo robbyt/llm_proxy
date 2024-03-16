@@ -107,9 +107,9 @@ func NewCacheConfig(cacheDir string) (*CacheConfig, error) {
 	}
 
 	if fileUtils.FileExists(iFile.filePath) {
-		log.Debugf("Loading existing cache index file from: %s", iFile.filePath)
+		log.Debugf("Loading existing cache config file from: %s", iFile.filePath)
 		if err := iFile.Load(); err != nil {
-			return nil, fmt.Errorf("failed to load index file: %s", err)
+			return nil, fmt.Errorf("failed to load cache config file: %s", err)
 		}
 		return iFile, nil
 	}
@@ -117,8 +117,7 @@ func NewCacheConfig(cacheDir string) (*CacheConfig, error) {
 	log.Debugf("Creating a new cache config file at: %s", iFile.filePath)
 	err := iFile.Save()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create index file: %s", err)
+		return nil, fmt.Errorf("failed to create config file: %s", err)
 	}
-	log.Debugf("Created new cache index file: %s", indexFilePath)
 	return iFile, nil
 }
