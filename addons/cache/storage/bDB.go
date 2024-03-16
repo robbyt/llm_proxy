@@ -7,16 +7,20 @@ import (
 	"github.com/robbyt/llm_proxy/addons/fileUtils"
 )
 
-type bDB struct {
-	db         *badger.DB
+type BadgerDB struct {
+	DB         *badger.DB
 	identifier string
 	dbFile     string
 }
 
-// new_bDB creates a wrapper object for a BadgerDB database
+func (b *BadgerDB) Close() error {
+	return b.DB.Close()
+}
+
+// NewBadgerDB creates a wrapper object for a BadgerDB database
 // url: the base URL for requests stored in this DB
 // dbFileDir: the directory where the database file will be stored
-func new_bDB(identifier string, dbFileDir string) (*bDB, error) {
+func NewBadgerDB(identifier string, dbFileDir string) (*BadgerDB, error) {
 	dbFile := fileUtils.ConvertURLtoFileName(dbFileDir, identifier)
 	err := fileUtils.RelocateExistingFileIfExists(dbFile)
 	if err != nil {
@@ -27,13 +31,9 @@ func new_bDB(identifier string, dbFileDir string) (*bDB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error opening db: %s", err)
 	}
-	return &bDB{
-		db:         db,
+	return &BadgerDB{
+		DB:         db,
 		identifier: identifier,
 		dbFile:     dbFile,
 	}, nil
-}
-
-func (b *bDB) close() error {
-	return b.db.Close()
 }

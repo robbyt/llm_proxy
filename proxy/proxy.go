@@ -86,8 +86,14 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 	log.Debugf("AppMode set to: %v", cfg.AppMode)
 	switch cfg.AppMode {
 	case config.CacheMode:
+		cacheConfig, err := config.NewCacheConfig(cfg.Cache.Dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cache config: %v", err)
+		}
+
 		cacheAddon, err := addons.NewCacheAddon(
-			cfg.Cache.Dir,
+			cacheConfig.StorageEngine,
+			cacheConfig.StoragePath,
 			cfg.FilterReqHeaders,
 			cfg.FilterRespHeaders,
 		)
@@ -96,26 +102,29 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 		}
 		p.AddAddon(cacheAddon)
 
-		// logSource object with all fields enabled for caching mode
-		logSources := config.LogSourceConfigAllTrue
+		/*
+			// logSource object with all fields enabled for caching mode
+			logSources := config.LogSourceConfigAllTrue
 
-		// append the WriteToDir LogDestination to the logDest slice, so megadumper will write to disk
-		logDest = append(logDest, md.WriteToDir)
+			// append the WriteToDir LogDestination to the logDest slice, so megadumper will write to disk
+			logDest = append(logDest, md.WriteToDir)
 
-		// create and configure MegaDirDumper addon object
-		dumperAddon, err := addons.NewMegaDirDumper(
-			cfg.OutputDir,
-			md.Format_JSON,
-			logSources,
-			logDest,
-			cfg.FilterReqHeaders, cfg.FilterRespHeaders,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create dumper: %v", err)
-		}
 
-		// add the dumper to the proxy
-		p.AddAddon(dumperAddon)
+				// create and configure MegaDirDumper addon object
+				dumperAddon, err := addons.NewMegaDirDumper(
+					cfg.OutputDir,
+					md.Format_JSON,
+					logSources,
+					logDest,
+					cfg.FilterReqHeaders, cfg.FilterRespHeaders,
+				)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create dumper: %v", err)
+				}
+
+				// add the dumper to the proxy
+				p.AddAddon(dumperAddon)
+		*/
 
 	case config.DirLoggerMode:
 		// struct of bools to toggle the various log outputs
