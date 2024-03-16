@@ -5,30 +5,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	upgradedHeader = "X-Llm_proxy-scheme-upgraded"
+)
+
 type SchemeUpgrader struct {
 	px.BaseAddon
-	upgraded bool
 }
 
 func (c *SchemeUpgrader) Request(f *px.Flow) {
 	// upgrade to https
 	if f.Request.URL.Scheme == "https" {
 		log.Debugf("Upgrading URL scheme from http to https not needed for URL: %s", f.Request.URL)
-		c.upgraded = false
+
 		return
 	}
+
+	// add a header to the request to indicate that the scheme was upgraded
+	f.Request.Header.Add(upgradedHeader, "true")
 
 	// upgrade the connection from http to https, so when sent upstream it will be encrypted
 	f.Request.URL.Scheme = "https"
-	c.upgraded = true
 }
 
 func (c *SchemeUpgrader) Response(f *px.Flow) {
-	if !c.upgraded {
-		return
+	if f.Request.Header.Get(upgradedHeader) != "" {
+		f.Response.Header.Add(upgradedHeader, "true")
 	}
-	if f.Response == nil || f.Response.Header == nil {
-		return
-	}
-	f.Response.Header.Add("X-Llm_proxy-scheme-upgraded", "true")
 }

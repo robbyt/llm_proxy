@@ -1,7 +1,6 @@
 package addons
 
 import (
-	"net/url"
 	"testing"
 
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -10,18 +9,32 @@ import (
 
 func TestSchemeUpgrader_Request(t *testing.T) {
 	upgrader := &SchemeUpgrader{}
-	req := &px.Request{
-		URL: &url.URL{
-			Scheme: "http",
-		},
-		Method: "GET",
-	}
+	req := &px.Request{}
+	err := req.UnmarshalJSON(
+		[]byte(`{"method":"GET","url":"http://example.com","proto":"HTTP/1.1","header":{}}`))
+	assert.Nil(t, err)
+
 	flow := &px.Flow{
 		Request: req,
 	}
 
 	upgrader.Request(flow)
-
 	assert.Equal(t, "https", flow.Request.URL.Scheme)
-	assert.True(t, upgrader.upgraded)
+	assert.Equal(t, "true", flow.Request.Header.Get(upgradedHeader))
+}
+
+func TestSchemeUpgrader_Request_HTTPS(t *testing.T) {
+	upgrader := &SchemeUpgrader{}
+	req := &px.Request{}
+	err := req.UnmarshalJSON(
+		[]byte(`{"method":"GET","url":"https://example.com","proto":"HTTP/1.1","header":{}}`))
+	assert.Nil(t, err)
+
+	flow := &px.Flow{
+		Request: req,
+	}
+
+	upgrader.Request(flow)
+	assert.Equal(t, "https", flow.Request.URL.Scheme)
+	assert.Equal(t, "", flow.Request.Header.Get(upgradedHeader))
 }
