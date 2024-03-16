@@ -20,16 +20,16 @@ func (b *BadgerDB) Close() error {
 // NewBadgerDB creates a wrapper object for a BadgerDB database
 // identifier: identify the database (probably the request URL)
 // dbFileDir: the directory where the database file is or will be stored
-func NewBadgerDB(identifier string, cacheDir string) (*BadgerDB, error) {
-	dbFile := fileUtils.ConvertURLtoFileName(cacheDir, identifier)
+func NewBadgerDB(identifier string, dbFileDir string) (*BadgerDB, error) {
+	dbFileName := fileUtils.ConvertURLtoFileName(dbFileDir, identifier)
 
-	db, err := badger.Open(badger.DefaultOptions(dbFile))
+	db, err := badger.Open(badger.DefaultOptions(dbFileName))
 	if err != nil {
 		return nil, fmt.Errorf("error opening db: %s", err)
 	}
 	return &BadgerDB{
 		DB:         db,
 		identifier: identifier,
-		dbFile:     dbFile,
+		dbFile:     dbFileName,
 	}, nil
 }
