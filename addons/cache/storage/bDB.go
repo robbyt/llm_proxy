@@ -76,7 +76,14 @@ func (b *BadgerDB) Close() error {
 // identifier: identify the database (probably the request URL)
 // dbFileName: the full path to the database file is or will be stored
 func NewBadgerDB(identifier, dbFileName string) (*BadgerDB, error) {
-	db, err := badger.Open(badger.DefaultOptions(dbFileName))
+	options := badger.DefaultOptions(dbFileName)
+	options.NumVersionsToKeep = 0
+	options.CompactL0OnClose = true
+	options.ValueLogFileSize = 1024 * 1024 * 10
+	options.SyncWrites = true
+
+	db, err := badger.Open(options)
+
 	if err != nil {
 		return nil, fmt.Errorf("error opening db: %s", err)
 	}
