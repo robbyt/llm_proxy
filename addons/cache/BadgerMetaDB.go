@@ -89,6 +89,7 @@ func (c *BadgerMetaDB) loadDB(identifier, dbFileName string) (*storage.BadgerDB,
 	return bDb, nil
 }
 
+/*
 func (c *BadgerMetaDB) closeSerial() error {
 	errors := make([]error, 0)
 	for _, db := range c.dbCache.All() {
@@ -102,6 +103,7 @@ func (c *BadgerMetaDB) closeSerial() error {
 
 	return c.controlDb.Close()
 }
+*/
 
 func (c *BadgerMetaDB) closeParallel() error {
 	var wg sync.WaitGroup
@@ -145,7 +147,7 @@ func (c *BadgerMetaDB) Close() error {
 	}
 
 	c.metaIsClosed = true
-	return c.closeSerial()
+	return c.closeParallel()
 }
 
 // Lookup receives a request, pulls out the request URL, uses that URL as a
