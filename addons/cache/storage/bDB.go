@@ -18,14 +18,10 @@ func (b *BadgerDB) Close() error {
 }
 
 // NewBadgerDB creates a wrapper object for a BadgerDB database
-// url: the base URL for requests stored in this DB
-// dbFileDir: the directory where the database file will be stored
-func NewBadgerDB(identifier string, dbFileDir string) (*BadgerDB, error) {
-	dbFile := fileUtils.ConvertURLtoFileName(dbFileDir, identifier)
-	err := fileUtils.RelocateExistingFileIfExists(dbFile)
-	if err != nil {
-		return nil, fmt.Errorf("error while relocating existing file: %s", err)
-	}
+// identifier: identify the database (probably the request URL)
+// dbFileDir: the directory where the database file is or will be stored
+func NewBadgerDB(identifier string, cacheDir string) (*BadgerDB, error) {
+	dbFile := fileUtils.ConvertURLtoFileName(cacheDir, identifier)
 
 	db, err := badger.Open(badger.DefaultOptions(dbFile))
 	if err != nil {
