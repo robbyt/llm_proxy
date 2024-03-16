@@ -1,6 +1,7 @@
 package fileUtils
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -82,14 +83,10 @@ func RelocateExistingFileIfExists(fileName string) error {
 	return nil
 }
 
-// ConvertURLtoFileName converts a URL string into a filename string by replacing several characters
-func ConvertURLtoFileName(dbFileDir, url string) string {
-	url = strings.ReplaceAll(url, "https://", "")
-	url = strings.ReplaceAll(url, "http://", "")
-	replaceChars := []string{"/", "&", "+", "#", "?", "="}
-	for _, r := range replaceChars {
-		// loving that golang 1.22 iterator style
-		url = strings.ReplaceAll(url, r, "_")
-	}
-	return filepath.Join(dbFileDir, url)
+// ConvertIDtoFileName converts a ID string into a filename string by replacing several characters
+func ConvertIDtoFileName(dbFileDir, identifier string) string {
+	identifier = strings.ReplaceAll(identifier, "https://", "")
+	identifier = strings.ReplaceAll(identifier, "http://", "")
+	encodedString := base64.StdEncoding.EncodeToString([]byte(identifier))
+	return filepath.Join(dbFileDir, encodedString)
 }

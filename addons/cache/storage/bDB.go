@@ -4,13 +4,68 @@ import (
 	"fmt"
 
 	badger "github.com/dgraph-io/badger/v4"
-	"github.com/robbyt/llm_proxy/addons/fileUtils"
 )
 
 type BadgerDB struct {
 	DB         *badger.DB
 	identifier string
-	dbFile     string
+	DBFileName string
+}
+
+func (b *BadgerDB) GetBytes(key []byte) ([]byte, error) {
+	var value []byte
+	err := b.DB.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		err = item.Value(func(val []byte) error {
+			value = val
+			return nil
+		})
+		return err
+	})
+	return value, err
+}
+
+// GetBytesSafe attempts to get a value from the database, and returns nil if not found
+func (b *BadgerDB) GetBytesSafe(key []byte) ([]byte, error) {
+	val, err := b.GetBytes(key)
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error getting value from db: %s", err)
+	}
+	return val, nil
+}
+
+func (b *BadgerDB) GetStr(key string) ([]byte, error) {
+	return b.GetBytes([]byte(key))
+}
+
+// GetStrSafe attempts to get a value from the database, and if it fails it returns nil
+func (b *BadgerDB) GetStrSafe(key string) ([]byte, error) {
+	val, err := b.GetStr(key)
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error getting value from db: %s", err)
+	}
+	return val, nil
+}
+
+func (b *BadgerDB) SetBytes(key, value []byte) error {
+	// badger.NewEntry(key, value).WithMeta(byte(42))
+
+	return b.DB.Update(func(txn *badger.Txn) error {
+		return txn.Set(key, value)
+	})
+}
+
+func (b *BadgerDB) SetStr(key, value string) error {
+	return b.SetBytes([]byte(key), []byte(value))
 }
 
 func (b *BadgerDB) Close() error {
@@ -19,10 +74,8 @@ func (b *BadgerDB) Close() error {
 
 // NewBadgerDB creates a wrapper object for a BadgerDB database
 // identifier: identify the database (probably the request URL)
-// dbFileDir: the directory where the database file is or will be stored
-func NewBadgerDB(identifier string, dbFileDir string) (*BadgerDB, error) {
-	dbFileName := fileUtils.ConvertURLtoFileName(dbFileDir, identifier)
-
+// dbFileName: the full path to the database file is or will be stored
+func NewBadgerDB(identifier, dbFileName string) (*BadgerDB, error) {
 	db, err := badger.Open(badger.DefaultOptions(dbFileName))
 	if err != nil {
 		return nil, fmt.Errorf("error opening db: %s", err)
@@ -30,6 +83,6 @@ func NewBadgerDB(identifier string, dbFileDir string) (*BadgerDB, error) {
 	return &BadgerDB{
 		DB:         db,
 		identifier: identifier,
-		dbFile:     dbFileName,
+		DBFileName: dbFileName,
 	}, nil
 }

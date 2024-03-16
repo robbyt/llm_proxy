@@ -112,7 +112,7 @@ func TestConvertURLtoFileName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ConvertURLtoFileName(tt.dbFileDir, tt.url)
+			got := ConvertIDtoFileName(tt.dbFileDir, tt.url)
 			assert.Equal(t, tt.want, got)
 		})
 	}

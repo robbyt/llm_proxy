@@ -2,6 +2,7 @@ package addons
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
@@ -14,11 +15,10 @@ type ResponseCacheAddon struct {
 	px.BaseAddon
 	formatter formatters.MegaDumpFormatter
 	cache     cache.DB
-	cacheHit  bool
+	closed    atomic.Bool
 }
 
 func (mca *ResponseCacheAddon) Request(f *px.Flow) {
-	mca.cacheHit = false
 	// Only cache these request methods (and empty string for GET)
 	cacheOnlyMethods := map[string]struct{}{
 		"GET":     {},
@@ -39,7 +39,6 @@ func (mca *ResponseCacheAddon) Request(f *px.Flow) {
 	}
 	if cacheLookup != nil {
 		log.Debugf("cache hit for: %s", f.Request.URL)
-		mca.cacheHit = true
 		f.Response = cacheLookup
 		// TODO add a response header to indicate this is a cache hit
 	}
@@ -54,6 +53,19 @@ func (c *ResponseCacheAddon) Response(f *px.Flow) {
 	}()
 }
 
+func (d *ResponseCacheAddon) String() string {
+	return "ResponseCacheAddon"
+}
+
+func (d *ResponseCacheAddon) Close() error {
+	if !d.closed.Swap(true) {
+		log.Debug("Waiting for ResponseCacheAddon shutdown...")
+		d.cache.Close()
+	}
+
+	return nil
+}
+
 func NewCacheAddon(
 	storageEngineName string, // name of the storage engine to use
 	cacheDir string, // output & cache storage directory
@@ -64,7 +76,7 @@ func NewCacheAddon(
 
 	switch storageEngineName {
 	case "badger":
-		cacheDB, err = cache.NewBadgerDB(cacheDir)
+		cacheDB, err = cache.NewBadgerMetaDB(cacheDir)
 	default:
 		return nil, fmt.Errorf("unknown storage engine: %s", storageEngineName)
 	}

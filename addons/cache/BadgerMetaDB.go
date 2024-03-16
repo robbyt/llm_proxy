@@ -4,53 +4,94 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"path/filepath"
 	"sync"
 
-	badger "github.com/dgraph-io/badger/v4"
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/robbyt/llm_proxy/addons/cache/storage"
+	"github.com/robbyt/llm_proxy/addons/fileUtils"
 )
 
 const (
-	bdbControlDbName = "system"
+	bdbControlDbName = "control"
 )
 
 // BadgerMetaDB is a collection of multiple BadgerDBs, each with a different identifier
 type BadgerMetaDB struct {
-	db        map[string]*storage.BadgerDB // key is the base URL
-	dbFileDir string                       // several DBs stored in the same directory, one for each base URL
+	dbFileDir         string            // several DBs stored in the same directory, one for each base URL
+	controlDb         *storage.BadgerDB // the control DB, stores the map of URL -> dbFilePath
+	controlDBAddMutex sync.Mutex
+	dbCache           *storage.BadgerDB_CacheMap
+	metaIsClosed      bool
+}
+
+// controlDB_FilePath returns the filepath to the control DB, which handles lookup of the other DBs
+func (c *BadgerMetaDB) controlDB_FilePath() string {
+	return filepath.Join(c.dbFileDir, bdbControlDbName)
+}
+
+// filePath returns the file path for a given identifier (i.e., URL)
+func (c *BadgerMetaDB) filePath(identifier string) string {
+	return fileUtils.ConvertIDtoFileName(c.dbFileDir, identifier)
 }
 
 // addDB adds a new BadgerDB to the meta collection
 func (c *BadgerMetaDB) addDB(identifier string) error {
-	bDB, _ := c.getDB(identifier)
-	if bDB != nil {
-		return DatabaseExistsError{Identifier: identifier}
-	}
+	c.controlDBAddMutex.Lock()
+	defer c.controlDBAddMutex.Unlock()
 
-	db, err := storage.NewBadgerDB(identifier, c.dbFileDir)
+	db, err := c.loadDB(identifier, c.filePath(identifier))
 	if err != nil {
 		return err
 	}
-
-	c.db[identifier] = db
-	return nil
+	return c.controlDb.SetStr(identifier, db.DBFileName)
 }
 
 // getDB retrieves a BadgerDB from the collection
 func (c *BadgerMetaDB) getDB(identifier string) (*storage.BadgerDB, error) {
-	targetDB := c.db[identifier]
-	if targetDB == nil {
-		return nil, DatabaseNotFoundError{Identifier: identifier}
+	dbFileName, err := c.controlDb.GetStrSafe(identifier)
+	if err != nil {
+		log.Warnf("error getting dbFileName from control db for %s: %s", identifier, err)
+		return nil, err
 	}
-	return targetDB, nil
+
+	if dbFileName == nil {
+		log.Debugf("dbFileName not found in control db, creating: %s", identifier)
+		if err := c.addDB(identifier); err != nil {
+			return nil, err
+		}
+
+		// try again, this time without the safe lookup
+		dbFileName, err = c.controlDb.GetStr(identifier)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return c.loadDB(identifier, string(dbFileName))
+}
+
+// loadDB loads or creates a badgerDB to/from disk
+func (c *BadgerMetaDB) loadDB(identifier, dbFileName string) (*storage.BadgerDB, error) {
+	// lookup the db in the cache
+	if db, ok := c.dbCache.Get(identifier); ok {
+		return db, nil
+	}
+
+	bDb, err := storage.NewBadgerDB(identifier, dbFileName)
+	if err != nil {
+		return nil, err
+	}
+
+	c.dbCache.Put(identifier, bDb)
+	return bDb, nil
 }
 
 func (c *BadgerMetaDB) closeSerial() error {
 	errors := make([]error, 0)
-	for _, db := range c.db {
+	for _, db := range c.dbCache.All() {
 		if err := db.Close(); err != nil {
 			errors = append(errors, err)
 		}
@@ -59,14 +100,15 @@ func (c *BadgerMetaDB) closeSerial() error {
 		return fmt.Errorf("error(s) closing db: %v", errors)
 	}
 
-	return nil
+	return c.controlDb.Close()
 }
 
 func (c *BadgerMetaDB) closeParallel() error {
 	var wg sync.WaitGroup
 	errors := make(chan error)
+	defer c.controlDb.Close()
 
-	for _, db := range c.db {
+	for _, db := range c.dbCache.All() {
 		wg.Add(1)
 		go func(db *storage.BadgerDB) {
 			defer wg.Done()
@@ -95,58 +137,23 @@ func (c *BadgerMetaDB) closeParallel() error {
 	return nil
 }
 
-// getBytes retrieves a value from one of the BadgerDBs in the collection.
-// Not yet sure how to handle key not found errors.
-func (c *BadgerMetaDB) getBytes(identifier string, key []byte) ([]byte, error) {
-	targetDB, err := c.getDB(identifier)
-	if err != nil {
-		return nil, err
-	}
-
-	var value []byte
-	err = targetDB.DB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(key)
-		if err != nil {
-			return err
-		}
-		err = item.Value(func(val []byte) error {
-			value = val
-			return nil
-		})
-		return err
-	})
-	return value, err
-}
-
-func (c *BadgerMetaDB) getStr(identifier string, key string) ([]byte, error) {
-	return c.getBytes(identifier, []byte(key))
-}
-
-func (c *BadgerMetaDB) setBytes(identifier string, key, value []byte) error {
-	badger.NewEntry(key, value).WithMeta(byte(42))
-
-	targetDB := c.db[identifier]
-	if targetDB == nil {
-		return fmt.Errorf("no db found for url: %s", identifier)
-	}
-
-	return targetDB.DB.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, value)
-	})
-}
-
-func (c *BadgerMetaDB) SetStr(identifier, key string, value []byte) error {
-	return c.setBytes(identifier, []byte(key), value)
-}
-
 // Close closes all the BadgerDBs in the collection
 func (c *BadgerMetaDB) Close() error {
+	if c.metaIsClosed {
+		log.Warn("attempted to close an already closed BadgerMetaDB")
+		return nil
+	}
+
+	c.metaIsClosed = true
 	return c.closeSerial()
 }
 
 // Lookup receives a request, pulls out the request URL, uses that URL as a
-// cache "identifier" (to use the correct DB), and then looks up the request
-// in the cache based on the body, returning the response if found.
+// cache "identifier" (to use the correct storage DB), and then looks up the
+// request in cache based on the body, returning the cached response if found.
+//
+// The request URL can be considered the primary index (different files per URL),
+// and the body is the secondary index.
 func (c *BadgerMetaDB) Lookup(req px.Request) (*px.Response, error) {
 	if req.URL == nil || req.URL.String() == "" {
 		return nil, fmt.Errorf("request URL is nil or empty")
@@ -158,15 +165,25 @@ func (c *BadgerMetaDB) Lookup(req px.Request) (*px.Response, error) {
 		body = []byte("")
 	}
 
-	// unsure if err means not found, or some other error
-	valueBytes, err := c.getBytes(identifier, body)
+	targetDB, err := c.getDB(identifier)
 	if err != nil {
-		log.Warnf("error looking up cache: %s", err)
 		return nil, err
+	}
+	if targetDB == nil {
+		return nil, fmt.Errorf("targetDB is nil for identifier: %s", identifier)
+	}
+
+	valueBytes, err := targetDB.GetBytesSafe(body)
+	if err != nil {
+		return nil, err
+	}
+	if valueBytes == nil {
+		log.Debugf("cache miss for: %s", identifier)
+		return nil, nil
 	}
 
 	decoder := gob.NewDecoder(bytes.NewReader(valueBytes))
-	var r px.Response // damn, this won't work?
+	var r px.Response // damn, maybe this won't work?
 	if err := decoder.Decode(&r); err != nil {
 		return nil, err
 	}
@@ -179,19 +196,18 @@ func (c *BadgerMetaDB) Store(req px.Request, resp *px.Response) error {
 	return nil
 }
 
-func NewBadgerDB(dbFileDir string) (*BadgerMetaDB, error) {
+func NewBadgerMetaDB(dbFileDir string) (*BadgerMetaDB, error) {
 	bMeta := &BadgerMetaDB{
-		db:        make(map[string]*storage.BadgerDB),
 		dbFileDir: dbFileDir,
+		dbCache:   storage.NewBadgerDB_CacheMap(),
 	}
 
-	err := bMeta.addDB(bdbControlDbName)
+	// create/load the control db, which does mapping from URL -> bdb object
+	controlDB, err := bMeta.loadDB(bdbControlDbName, bMeta.controlDB_FilePath())
 	if err != nil {
-		// ignore if the control DB already exists
-		if _, ok := err.(*DatabaseExistsError); !ok {
-			return nil, err
-		}
+		return nil, err
 	}
+	bMeta.controlDb = controlDB
 
 	return bMeta, nil
 }
