@@ -11,6 +11,14 @@ import (
 	"github.com/robbyt/llm_proxy/addons/megadumper/formatters"
 )
 
+var cacheOnlyMethods = map[string]struct{}{
+	"GET":     {},
+	"":        {},
+	"HEAD":    {},
+	"OPTIONS": {},
+	"POST":    {},
+}
+
 type ResponseCacheAddon struct {
 	px.BaseAddon
 	formatter formatters.MegaDumpFormatter
@@ -20,15 +28,9 @@ type ResponseCacheAddon struct {
 
 func (mca *ResponseCacheAddon) Request(f *px.Flow) {
 	// Only cache these request methods (and empty string for GET)
-	cacheOnlyMethods := map[string]struct{}{
-		"GET":     {},
-		"":        {},
-		"HEAD":    {},
-		"OPTIONS": {},
-		"POST":    {},
-	}
 	if _, ok := cacheOnlyMethods[f.Request.Method]; !ok {
-		log.Debugf("skipping cache for: %s", f.Request.URL)
+		log.Debugf(
+			"skipping cache lookup for unsupported method: %s %s", f.Request.Method, f.Request.URL)
 		return
 	}
 

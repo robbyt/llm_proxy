@@ -161,8 +161,9 @@ func (c *BadgerMetaDB) Lookup(req px.Request) (*px.Response, error) {
 	identifier := req.URL.String()
 
 	body := req.Body
-	if body == nil {
-		body = []byte("")
+	if len(body) == 0 {
+		// if the body is empty, use a single space as the key because badger doesn't support empty keys
+		body = []byte(" ")
 	}
 
 	targetDB, err := c.getDB(identifier)
