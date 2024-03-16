@@ -60,7 +60,7 @@ func (d *ResponseCacheAddon) String() string {
 func (d *ResponseCacheAddon) Close() error {
 	if !d.closed.Swap(true) {
 		log.Debug("Waiting for ResponseCacheAddon shutdown...")
-		d.cache.Close()
+		return d.cache.Close()
 	}
 
 	return nil
