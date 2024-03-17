@@ -87,6 +87,6 @@ func RelocateExistingFileIfExists(fileName string) error {
 func ConvertIDtoFileName(dbFileDir, identifier string) string {
 	identifier = strings.ReplaceAll(identifier, "https://", "")
 	identifier = strings.ReplaceAll(identifier, "http://", "")
-	encodedString := base64.StdEncoding.EncodeToString([]byte(identifier))
+	encodedString := base64.URLEncoding.EncodeToString([]byte(identifier))
 	return filepath.Join(dbFileDir, encodedString)
 }
