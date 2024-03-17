@@ -181,7 +181,7 @@ func (c *BadgerMetaDB) Lookup(req px.Request) (*px.Response, error) {
 		return nil, err
 	}
 	if valueBytes == nil {
-		log.Debugf("cache miss for: %s", identifier)
+		log.Debugf("valueBytes empty for: %s", identifier)
 		return nil, nil
 	}
 
