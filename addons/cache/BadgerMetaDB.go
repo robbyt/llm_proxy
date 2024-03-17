@@ -195,7 +195,38 @@ func (c *BadgerMetaDB) Lookup(req px.Request) (*px.Response, error) {
 }
 
 func (c *BadgerMetaDB) Store(req px.Request, resp *px.Response) error {
-	log.Errorf("Store not implemented")
+	if req.URL == nil || req.URL.String() == "" {
+		return fmt.Errorf("request URL is nil or empty")
+	}
+	identifier := req.URL.String()
+	body := req.Body
+	if len(body) == 0 {
+		// if the body is empty, use a single space as the key because badger doesn't support empty keys
+		body = []byte(" ")
+	}
+	targetDB, err := c.getDB(identifier)
+	if err != nil {
+		return err
+	}
+	if targetDB == nil {
+		return fmt.Errorf("targetDB is nil for identifier: %s", identifier)
+	}
+
+	// Encode the response into a gob object, for storage in the targetDB
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err = enc.Encode(body)
+	if err != nil {
+		log.Fatal("encode error:", err)
+	}
+
+	// Store the encoded data in the targetDB
+	err = targetDB.SetStr(identifier, buf.String())
+	if err != nil {
+		log.Fatal("set bytes error:", err)
+	}
+
+	log.Debugf("stored response in cache for: %s", identifier)
 	return nil
 }
 
