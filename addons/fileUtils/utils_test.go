@@ -100,13 +100,13 @@ func TestConvertURLtoFileName(t *testing.T) {
 			name:      "Test with https URL",
 			dbFileDir: "/tmp",
 			url:       "https://example.com/test?param=value",
-			want:      "/tmp/example.com_test_param_value",
+			want:      "/tmp/ZXhhbXBsZS5jb20vdGVzdD9wYXJhbT12YWx1ZQ==",
 		},
 		{
 			name:      "Test with http URL",
 			dbFileDir: "/tmp",
 			url:       "http://example.com/test?param=value&param2=value2",
-			want:      "/tmp/example.com_test_param_value_param2_value2",
+			want:      "/tmp/ZXhhbXBsZS5jb20vdGVzdD9wYXJhbT12YWx1ZSZwYXJhbTI9dmFsdWUy",
 		},
 	}
 
