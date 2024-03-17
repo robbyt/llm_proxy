@@ -24,3 +24,11 @@ func (l *LogSourceConfig) String() string {
 	}
 	return string(bytes)
 }
+
+var LogSourceConfigAllTrue = LogSourceConfig{
+	LogConnectionStats: true,
+	LogRequestHeaders:  true,
+	LogRequestBody:     true,
+	LogResponseHeaders: true,
+	LogResponseBody:    true,
+}
