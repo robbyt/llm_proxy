@@ -43,7 +43,9 @@ func (mca *ResponseCacheAddon) Request(f *px.Flow) {
 		log.Debugf("cache hit for: %s", f.Request.URL)
 		f.Response = cacheLookup
 		// TODO add a response header to indicate this is a cache hit
+		return
 	}
+	log.Debugf("cache miss for: %s", f.Request.URL)
 }
 
 func (c *ResponseCacheAddon) Response(f *px.Flow) {
