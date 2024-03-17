@@ -2,12 +2,19 @@ package storage
 
 import (
 	"fmt"
+	"sync"
 
 	badger "github.com/dgraph-io/badger/v4"
+	log "github.com/sirupsen/logrus"
 )
+
+// local variable to set the log level for the BadgerDB output
+var bDb_LogLevel = log.DebugLevel
 
 type BadgerDB struct {
 	DB         *badger.DB
+	once       sync.Once
+	gcRunning  sync.Mutex
 	identifier string
 	DBFileName string
 }
@@ -68,21 +75,48 @@ func (b *BadgerDB) SetStr(key, value string) error {
 	return b.SetBytes([]byte(key), []byte(value))
 }
 
+func (b *BadgerDB) RunGC() error {
+	b.gcRunning.Lock()
+	defer b.gcRunning.Unlock()
+	log.Debug("Running BadgerDB GC")
+	return b.DB.RunValueLogGC(0.5)
+}
+
 func (b *BadgerDB) Close() error {
-	return b.DB.Close()
+	var err error
+	b.RunGC()
+
+	b.once.Do(func() {
+		// log.Debug("Closing BadgerDB")
+		errClose := b.DB.Close()
+		if errClose != nil {
+			err = fmt.Errorf("error closing db: %s", errClose)
+			return
+		}
+	})
+	return err
+}
+
+// configBadger tells the BadgerDB which DB to open sets other caching/sizing/scaling options
+func configBadger(dbFileName string) badger.Options {
+	options := badger.DefaultOptions(dbFileName).
+		WithIndexCacheSize(1024 * 1024 * 20).
+		WithNumVersionsToKeep(0).
+		WithCompactL0OnClose(true).
+		WithValueLogFileSize(1024 * 1024 * 100) // 100MB
+
+	var logger = log.New()
+	logger.SetLevel(bDb_LogLevel)
+	options.Logger = logger
+
+	return options
 }
 
 // NewBadgerDB creates a wrapper object for a BadgerDB database
 // identifier: identify the database (probably the request URL)
 // dbFileName: the full path to the database file is or will be stored
 func NewBadgerDB(identifier, dbFileName string) (*BadgerDB, error) {
-	options := badger.DefaultOptions(dbFileName)
-	options.NumVersionsToKeep = 0
-	options.CompactL0OnClose = true
-	options.ValueLogFileSize = 1024 * 1024 * 10
-	options.SyncWrites = true
-
-	db, err := badger.Open(options)
+	db, err := badger.Open(configBadger(dbFileName))
 
 	if err != nil {
 		return nil, fmt.Errorf("error opening db: %s", err)
