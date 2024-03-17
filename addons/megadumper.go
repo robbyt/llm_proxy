@@ -85,11 +85,11 @@ func (d *MegaDumpAddon) Close() error {
 
 // NewMegaDirDumper creates a new dumper that creates a new log file for each request
 func NewMegaDirDumper(
-	logTarget string,
-	logFormat md.LogFormat,
-	logSources config.LogSourceConfig,
-	logDestinations []md.LogDestination,
-	filterReqHeaders, filterRespHeaders []string,
+	logTarget string, // output directory
+	logFormat md.LogFormat, // what file format to write
+	logSources config.LogSourceConfig, // which fields from the transaction to log
+	logDestinations []md.LogDestination, // various types of writers, e.g. file, directory, stdout
+	filterReqHeaders, filterRespHeaders []string, // which headers to filter out
 ) (*MegaDumpAddon, error) {
 	var f formatters.MegaDumpFormatter
 	var w = make([]writers.MegaDumpWriter, 0)
