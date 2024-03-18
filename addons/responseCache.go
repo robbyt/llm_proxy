@@ -34,7 +34,7 @@ func (mca *ResponseCacheAddon) Request(f *px.Flow) {
 		return
 	}
 
-	cacheLookup, err := mca.cache.Lookup(*f.Request)
+	cacheLookup, err := mca.cache.Get(*f.Request)
 	if err != nil {
 		log.Errorf("error accessing cache, bypassing: %s", err)
 		return
@@ -51,7 +51,7 @@ func (mca *ResponseCacheAddon) Request(f *px.Flow) {
 func (c *ResponseCacheAddon) Response(f *px.Flow) {
 	go func() {
 		<-f.Done()
-		if err := c.cache.Store(*f.Request, f.Response); err != nil {
+		if err := c.cache.Put(*f.Request, f.Response); err != nil {
 			log.Errorf("error storing response in cache: %s", err)
 		}
 	}()

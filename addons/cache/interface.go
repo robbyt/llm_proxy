@@ -10,6 +10,6 @@ type DB interface {
 	// GetBytes(url string, key []byte) ([]byte, error)
 	// SetStr(url string, key string, value []byte) error
 	// SetBytes(url string, key []byte, value []byte) error
-	Lookup(req px.Request) (*px.Response, error)
-	Store(req px.Request, resp *px.Response) error
+	Get(req px.Request) (*px.Response, error)
+	Put(req px.Request, resp *px.Response) error
 }

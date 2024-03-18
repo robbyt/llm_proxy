@@ -2,6 +2,7 @@ package storage
 
 import "sync"
 
+// BadgerDB_CacheMap is a collection of BadgerDBs that are currently loaded into RAM
 type BadgerDB_CacheMap struct {
 	sync.Mutex
 	m map[string]*BadgerDB
