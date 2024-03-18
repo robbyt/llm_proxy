@@ -32,14 +32,6 @@ type CacheConfig struct {
 	StoragePath    string `json:"storage_path"`    // The full path to the storage bucket (file path or database URI)
 }
 
-// GetStorageEngine returns the storage engine for the cache index file
-/*
-func (i *CacheConfig) GetStorageEngine() (storage.CacheDB, error) {
-	// TODO get this out of the config layer
-	return i.CacheStorageDB.GetStorageEngine()
-}
-*/
-
 // Save writes the cache config json file to disk
 func (i CacheConfig) Save() error {
 	// Ensure the storage path subdirectory exists
