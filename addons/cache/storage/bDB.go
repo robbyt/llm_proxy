@@ -147,7 +147,6 @@ func configBadger(dbFileName string) badger.Options {
 // dbFileName: the full path to the database file is or will be stored
 func NewBadgerDB(identifier, dbFileName string) (*BadgerDB, error) {
 	db, err := badger.Open(configBadger(dbFileName))
-
 	if err != nil {
 		return nil, fmt.Errorf("error opening db: %s", err)
 	}

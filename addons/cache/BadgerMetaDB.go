@@ -24,7 +24,7 @@ type BadgerMetaDB struct {
 	controlDb         *storage.BadgerDB // the control DB, stores the map of URL -> dbFilePath
 	controlDBAddMutex sync.Mutex
 	dbCache           *storage.BadgerDB_CacheMap
-	metaIsClosed      bool
+	once              sync.Once
 }
 
 // controlDB_FilePath returns the filepath to the control DB, which handles lookup of the other DBs
@@ -49,11 +49,13 @@ func (c *BadgerMetaDB) addDB(identifier string) error {
 	return c.controlDb.SetStr(identifier, db.DBFileName)
 }
 
-// getDB retrieves a BadgerDB from the collection
+// getDB retrieves a BadgerDB using a lookup from the controlDB
 func (c *BadgerMetaDB) getDB(identifier string) (*storage.BadgerDB, error) {
+
+	// use a "safe" lookup to check the controlDB to ignore notfound errors
 	dbFileName, err := c.controlDb.GetStrSafe(identifier)
 	if err != nil {
-		log.Warnf("error getting dbFileName from control db for %s: %s", identifier, err)
+		log.Errorf("error getting dbFileName from control db for %s: %s", identifier, err)
 		return nil, err
 	}
 
@@ -141,32 +143,26 @@ func (c *BadgerMetaDB) closeParallel() error {
 
 // Close closes all the BadgerDBs in the collection
 func (c *BadgerMetaDB) Close() error {
-	if c.metaIsClosed {
-		log.Warn("attempted to close an already closed BadgerMetaDB")
-		return nil
-	}
-
-	c.metaIsClosed = true
-	return c.closeParallel()
+	var err error
+	c.once.Do(func() {
+		err = c.closeParallel()
+	})
+	return err
 }
 
-// Lookup receives a request, pulls out the request URL, uses that URL as a
+// Get receives a request, pulls out the request URL, uses that URL as a
 // cache "identifier" (to use the correct storage DB), and then looks up the
 // request in cache based on the body, returning the cached response if found.
 //
 // The request URL can be considered the primary index (different files per URL),
 // and the body is the secondary index.
-func (c *BadgerMetaDB) Lookup(req px.Request) (*px.Response, error) {
+func (c *BadgerMetaDB) Get(req px.Request) (*px.Response, error) {
 	if req.URL == nil || req.URL.String() == "" {
 		return nil, fmt.Errorf("request URL is nil or empty")
 	}
-	identifier := req.URL.String()
 
+	identifier := req.URL.String()
 	body := req.Body
-	if len(body) == 0 {
-		// if the body is empty, use a single space as the key because badger doesn't support empty keys
-		body = []byte(" ")
-	}
 
 	targetDB, err := c.getDB(identifier)
 	if err != nil {
@@ -194,7 +190,10 @@ func (c *BadgerMetaDB) Lookup(req px.Request) (*px.Response, error) {
 	return &r, nil
 }
 
-func (c *BadgerMetaDB) Store(req px.Request, resp *px.Response) error {
+// Put receives a request and response, pulls out the request URL, uses that
+// URL as a cache "identifier" (to use the correct storage DB), and then stores
+// the response in cache based on the request body.
+func (c *BadgerMetaDB) Put(req px.Request, resp *px.Response) error {
 	if req.URL == nil || req.URL.String() == "" {
 		return fmt.Errorf("request URL is nil or empty")
 	}
