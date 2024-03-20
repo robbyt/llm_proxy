@@ -9,13 +9,13 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/robbyt/llm_proxy/addons/cache/storage/bdb"
+	"github.com/robbyt/llm_proxy/addons/cache/storage/boltDB_Engine"
 )
 
 // BoltMetaDB is a single boltDB with multiple internal "buckets" for each URL (like tables)
 type BoltMetaDB struct {
-	dbFileDir string  // several DBs stored in the same directory, one for each base URL
-	db        *bdb.DB // the control DB, stores the map of URL -> dbFilePath
+	dbFileDir string            // several DBs stored in the same directory, one for each base URL
+	db        *boltDB_Engine.DB // the main db struct
 	once      sync.Once
 }
 

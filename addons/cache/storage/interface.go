@@ -1,6 +1,6 @@
 package storage
 
-type StorageLayer interface {
+type Engine interface {
 	// GetBytes gets a value from the database using a byte key
 	GetBytes(identifier string, key []byte) ([]byte, error)
 	// GetBytesSafe attempts to get a value from the database, and returns nil if not found
