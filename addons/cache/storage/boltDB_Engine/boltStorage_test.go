@@ -59,6 +59,13 @@ func TestBoltDB_GetSetStr(t *testing.T) {
 		val, err = db.GetStrSafe(t.Name(), "key")
 		require.NoError(t, err)
 		assert.Equal(t, "value", string(val))
+
+		err = db.Delete(t.Name(), []byte("key"))
+		require.NoError(t, err)
+
+		val, err = db.GetStrSafe(t.Name(), "key")
+		require.NoError(t, err)
+		assert.Nil(t, val)
 	})
 
 	t.Run("set and get empty string", func(t *testing.T) {
