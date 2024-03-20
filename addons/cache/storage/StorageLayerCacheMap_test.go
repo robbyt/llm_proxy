@@ -7,16 +7,16 @@ import (
 )
 
 func TestNewBadgerDB_CacheMap(t *testing.T) {
-	cacheMap := NewBadgerDB_CacheMap()
+	cacheMap := NewStorageLayerCacheMap()
 	assert.NotNil(t, cacheMap)
 	assert.Equal(t, 0, cacheMap.Len())
 }
 
 func TestBadgerDB_CacheMap_PutAndGet(t *testing.T) {
-	cacheMap := NewBadgerDB_CacheMap()
+	cacheMap := NewStorageLayerCacheMap()
 	tempDir := t.TempDir()
 
-	badgerDB, _ := NewBadgerDB("test", tempDir+"/test.db")
+	badgerDB, _ := NewBoltDB(tempDir + "/test.db")
 	defer badgerDB.Close()
 
 	cacheMap.Put("test", badgerDB)
@@ -33,10 +33,10 @@ func TestBadgerDB_CacheMap_PutAndGet(t *testing.T) {
 }
 
 func TestBadgerDB_CacheMap_DeleteAndClear(t *testing.T) {
-	cacheMap := NewBadgerDB_CacheMap()
+	cacheMap := NewStorageLayerCacheMap()
 	tempDir := t.TempDir()
 
-	badgerDB, _ := NewBadgerDB("test", tempDir+"/test.db")
+	badgerDB, _ := NewBoltDB(tempDir + "/test.db")
 	defer badgerDB.Close()
 
 	cacheMap.Put("test", badgerDB)

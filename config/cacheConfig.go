@@ -14,7 +14,7 @@ const (
 	currentCacheConfigVer    = "v1"
 	cacheConfigFileName      = "llm_proxy_cache.json"
 	currentStorageVersion    = "v1"
-	defaultStorageEngineName = "badger"
+	defaultStorageEngineName = "bolt"
 )
 
 // cacheBehavior stores input args config for the cache

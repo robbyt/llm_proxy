@@ -80,7 +80,10 @@ func NewCacheAddon(
 
 	switch storageEngineName {
 	case "badger":
-		cacheDB, err = cache.NewBadgerMetaDB(cacheDir)
+		// cacheDB, err = cache.NewBadgerMetaDB(cacheDir)
+		panic("badger storage engine is disabled")
+	case "bolt":
+		cacheDB, err = cache.NewBoltMetaDB(cacheDir)
 	default:
 		return nil, fmt.Errorf("unknown storage engine: %s", storageEngineName)
 	}
