@@ -1,5 +1,6 @@
 package storage
 
+// Engine is an interface for a storage engine, backed by some database for persistence
 type Engine interface {
 	// GetBytes gets a value from the database using a byte key
 	GetBytes(identifier string, key []byte) ([]byte, error)

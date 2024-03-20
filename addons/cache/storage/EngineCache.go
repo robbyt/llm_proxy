@@ -2,7 +2,7 @@ package storage
 
 import "sync"
 
-// EngineCache is a collection of StorageLayer objects currently loaded into RAM
+// EngineCache is a collection of storage engine objects currently loaded into RAM
 type EngineCache struct {
 	sync.Mutex
 	m map[string]Engine
