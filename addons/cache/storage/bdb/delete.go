@@ -1,4 +1,4 @@
-package storage
+package bdb
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 )
 
 // deleteForKey is a private/internal method to delete a key from the database w/o formatting
-func (b *BoltDB) deleteForKey(identifier string, key []byte) error {
+func (b *DB) deleteForKey(identifier string, key []byte) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte(identifier))
 		if err != nil {
@@ -19,6 +19,6 @@ func (b *BoltDB) deleteForKey(identifier string, key []byte) error {
 }
 
 // Delete removes a key from the database
-func (b *BoltDB) Delete(identifier string, key []byte) error {
+func (b *DB) Delete(identifier string, key []byte) error {
 	return b.deleteForKey(identifier, keyFormatter(key))
 }

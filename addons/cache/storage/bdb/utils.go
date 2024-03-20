@@ -1,4 +1,4 @@
-package storage
+package bdb
 
 // keyFormatter is a helper function to format a key for storage
 func keyFormatter(key []byte) []byte {

@@ -1,4 +1,4 @@
-package storage
+package bdb
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (b *BoltDB) getBytesForKey(identifier string, key []byte) (value []byte, err error) {
+func (b *DB) getBytesForKey(identifier string, key []byte) (value []byte, err error) {
 	err = b.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(identifier))
 		if bucket == nil {
@@ -29,12 +29,12 @@ func (b *BoltDB) getBytesForKey(identifier string, key []byte) (value []byte, er
 }
 
 // GetBytes gets a value from the database using a byte key
-func (b *BoltDB) GetBytes(identifier string, key []byte) (value []byte, err error) {
+func (b *DB) GetBytes(identifier string, key []byte) (value []byte, err error) {
 	return b.getBytesForKey(identifier, keyFormatter(key))
 }
 
 // GetBytesSafe attempts to get a value from the database, and returns nil if not found
-func (b *BoltDB) GetBytesSafe(identifier string, key []byte) ([]byte, error) {
+func (b *DB) GetBytesSafe(identifier string, key []byte) ([]byte, error) {
 	val, err := b.GetBytes(identifier, key)
 	if err != nil {
 		var keyNotFoundError ErrKeyNotFound
@@ -48,11 +48,11 @@ func (b *BoltDB) GetBytesSafe(identifier string, key []byte) ([]byte, error) {
 }
 
 // GetStr gets a value from the database using a string key
-func (b *BoltDB) GetStr(identifier string, key string) ([]byte, error) {
+func (b *DB) GetStr(identifier string, key string) ([]byte, error) {
 	return b.GetBytes(identifier, []byte(key))
 }
 
 // GetStrSafe attempts to get a value from the database, and if it fails it returns nil
-func (b *BoltDB) GetStrSafe(identifier string, key string) ([]byte, error) {
+func (b *DB) GetStrSafe(identifier string, key string) ([]byte, error) {
 	return b.GetBytesSafe(identifier, []byte(key))
 }

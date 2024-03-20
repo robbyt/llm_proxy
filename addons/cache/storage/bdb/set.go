@@ -1,4 +1,4 @@
-package storage
+package bdb
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 )
 
 // setBytesForKey is a private/internal method to set a value in the database w/o formatting
-func (b *BoltDB) setBytesForKey(identifier string, key, value []byte) error {
+func (b *DB) setBytesForKey(identifier string, key, value []byte) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte(identifier))
 		if err != nil {
@@ -23,11 +23,11 @@ func (b *BoltDB) setBytesForKey(identifier string, key, value []byte) error {
 }
 
 // SetBytes sets a value in the database using a byte key
-func (b *BoltDB) SetBytes(identifier string, key, value []byte) error {
+func (b *DB) SetBytes(identifier string, key, value []byte) error {
 	return b.setBytesForKey(identifier, keyFormatter(key), value)
 }
 
 // SetStr sets a value in the database using a string key
-func (b *BoltDB) SetStr(identifier string, key, value string) error {
+func (b *DB) SetStr(identifier string, key, value string) error {
 	return b.SetBytes(identifier, []byte(key), []byte(value))
 }
