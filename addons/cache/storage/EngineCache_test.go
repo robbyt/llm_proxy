@@ -4,39 +4,41 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/robbyt/llm_proxy/addons/cache/storage/boltDB_Engine"
 )
 
 func TestNewBadgerDB_CacheMap(t *testing.T) {
-	cacheMap := NewBadgerDB_CacheMap()
+	cacheMap := NewCacheMap()
 	assert.NotNil(t, cacheMap)
 	assert.Equal(t, 0, cacheMap.Len())
 }
 
 func TestBadgerDB_CacheMap_PutAndGet(t *testing.T) {
-	cacheMap := NewBadgerDB_CacheMap()
+	cacheMap := NewCacheMap()
 	tempDir := t.TempDir()
 
-	badgerDB, _ := NewBadgerDB("test", tempDir+"/test.db")
-	defer badgerDB.Close()
+	db, _ := boltDB_Engine.NewDB(tempDir + "/test.db")
+	defer db.Close()
 
-	cacheMap.Put("test", badgerDB)
+	cacheMap.Put("test", db)
 	assert.Equal(t, 1, cacheMap.Len())
 
 	retrievedDB, found := cacheMap.Get("test")
 	assert.True(t, found)
-	assert.Equal(t, badgerDB, retrievedDB)
+	assert.Equal(t, db, retrievedDB)
 
 	// access the entire map using All()
 	all := cacheMap.All()
 	assert.Equal(t, 1, len(all))
-	assert.Equal(t, badgerDB, all["test"])
+	assert.Equal(t, db, all["test"])
 }
 
 func TestBadgerDB_CacheMap_DeleteAndClear(t *testing.T) {
-	cacheMap := NewBadgerDB_CacheMap()
+	cacheMap := NewCacheMap()
 	tempDir := t.TempDir()
 
-	badgerDB, _ := NewBadgerDB("test", tempDir+"/test.db")
+	badgerDB, _ := boltDB_Engine.NewDB(tempDir + "/test.db")
 	defer badgerDB.Close()
 
 	cacheMap.Put("test", badgerDB)

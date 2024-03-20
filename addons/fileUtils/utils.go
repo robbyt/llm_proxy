@@ -64,7 +64,7 @@ func DirExistsOrCreate(dir string) error {
 			if err != nil {
 				return fmt.Errorf("failed to create directory: %w", err)
 			}
-			log.Infof("Log directory created successfully: %s", dir)
+			log.Infof("Directory created: %s", dir)
 		} else {
 			// If os.Stat failed for another reason, return the error
 			return fmt.Errorf("failed to check if directory exists: %w", err)

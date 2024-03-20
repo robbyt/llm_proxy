@@ -1,9 +1,7 @@
 package schema
 
 import (
-	"bytes"
 	"fmt"
-	"net/http"
 	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -14,28 +12,6 @@ import (
 )
 
 const SchemaVersion string = "v1"
-
-type TrafficObject struct {
-	Headers         http.Header `json:"headers"`
-	Body            string      `json:"body"`
-	headersToFilter []string    `json:"-"`
-}
-
-// HeadersString returns the headers as a flat string
-func (t *TrafficObject) HeadersString() string {
-	buf := new(bytes.Buffer)
-	if err := t.Headers.WriteSubset(buf, nil); err != nil {
-		return ""
-	}
-	return buf.String()
-}
-
-func (t *TrafficObject) filterHeaders() {
-	log.Debugf("Filtering headers from log output: %v", t.headersToFilter)
-	for _, header := range t.headersToFilter {
-		t.Headers.Del(header)
-	}
-}
 
 // LogDumpContainer holds the request and response data for a given flow
 type LogDumpContainer struct {
@@ -48,19 +24,21 @@ type LogDumpContainer struct {
 }
 
 func (d *LogDumpContainer) loadRequestHeaders() {
-	d.Request.Headers = d.flow.Request.Header
+	d.Request.Header = d.flow.Request.Header
 }
 
 func (d *LogDumpContainer) loadRequestBody() error {
 	// TODO CanPrint converts to a string, so there's no point in doing it twice
-	if utils.CanPrint(d.flow.Request.Body) {
-		d.Request.Body = string(d.flow.Request.Body)
+	bodyStr, canPrint := utils.CanPrintFast(d.flow.Request.Body)
+	if !canPrint {
+		return fmt.Errorf("request body is not printable: %s", d.flow.Request.URL)
 	}
+	d.Request.Body = bodyStr
 	return nil
 }
 
 func (d *LogDumpContainer) loadResponseHeaders() {
-	d.Response.Headers = d.flow.Response.Header
+	d.Response.Header = d.flow.Response.Header
 }
 
 func (d *LogDumpContainer) loadResponseBody() error {
