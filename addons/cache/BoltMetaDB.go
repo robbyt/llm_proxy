@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"path/filepath"
 	"sync"
 
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/robbyt/llm_proxy/addons/cache/storage/boltDB_Engine"
+)
+
+const (
+	defaultBoltDBFile = "bolt.db"
 )
 
 // BoltMetaDB is a single boltDB with multiple internal "buckets" for each URL (like tables)
@@ -94,8 +99,14 @@ func (c *BoltMetaDB) Put(req px.Request, resp *px.Response) error {
 
 // NewBoltMetaDB creates a new BoltMetaDB object, to load or create a new boltDB on disk
 func NewBoltMetaDB(dbFileDir string) (*BoltMetaDB, error) {
+	dbFile := filepath.Join(dbFileDir, defaultBoltDBFile)
+	db, err := boltDB_Engine.NewDB(dbFile)
+	if err != nil {
+		return nil, fmt.Errorf("error opening/creating db: %s", err)
+	}
 	bMeta := &BoltMetaDB{
 		dbFileDir: dbFileDir,
+		db:        db,
 	}
 	return bMeta, nil
 }

@@ -2,9 +2,11 @@ package boltDB_Engine
 
 import (
 	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/robbyt/llm_proxy/addons/fileUtils"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -37,9 +39,19 @@ func configBolt() *bolt.Options {
 	}
 }
 
-// NewBoltDB creates a wrapper object for a NewBoltDB database to creates new or load an existing DB.
+// NewDB creates a wrapper object for a NewDB database to creates new or load an existing DB.
 // dbFileName: the path where the BoltDB file is stored on disk
-func NewBoltDB(dbFileName string) (*DB, error) {
+func NewDB(dbFileName string) (*DB, error) {
+	if dbFileName == "" {
+		return nil, fmt.Errorf("db file name is empty")
+	}
+
+	dirPath := filepath.Dir(dbFileName)
+	err := fileUtils.DirExistsOrCreate(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("error creating db parent directory: %s", dirPath)
+	}
+
 	db, err := bolt.Open(dbFileName, 0600, configBolt())
 	if err != nil {
 		return nil, fmt.Errorf("error opening db: %s", err)

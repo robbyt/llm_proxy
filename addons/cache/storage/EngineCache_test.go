@@ -18,7 +18,7 @@ func TestBadgerDB_CacheMap_PutAndGet(t *testing.T) {
 	cacheMap := NewCacheMap()
 	tempDir := t.TempDir()
 
-	db, _ := boltDB_Engine.NewBoltDB(tempDir + "/test.db")
+	db, _ := boltDB_Engine.NewDB(tempDir + "/test.db")
 	defer db.Close()
 
 	cacheMap.Put("test", db)
@@ -38,7 +38,7 @@ func TestBadgerDB_CacheMap_DeleteAndClear(t *testing.T) {
 	cacheMap := NewCacheMap()
 	tempDir := t.TempDir()
 
-	badgerDB, _ := boltDB_Engine.NewBoltDB(tempDir + "/test.db")
+	badgerDB, _ := boltDB_Engine.NewDB(tempDir + "/test.db")
 	defer badgerDB.Close()
 
 	cacheMap.Put("test", badgerDB)

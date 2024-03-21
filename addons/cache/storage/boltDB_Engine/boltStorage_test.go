@@ -12,14 +12,14 @@ func TestNewBoltDB(t *testing.T) {
 		tempDir := t.TempDir()
 		testDB := tempDir + "/test.db"
 
-		db, err := NewBoltDB(testDB)
+		db, err := NewDB(testDB)
 		require.NoError(t, err)
 		assert.NotNil(t, db)
 		assert.Equal(t, testDB, db.GetDBFileName())
 	})
 
 	t.Run("invalid db file", func(t *testing.T) {
-		_, err := NewBoltDB("")
+		_, err := NewDB("")
 		assert.Error(t, err)
 	})
 
@@ -44,7 +44,7 @@ func TestBoltDB_GetSetStr(t *testing.T) {
 	tempDir := t.TempDir()
 	testDB := tempDir + "/test.db"
 
-	db, err := NewBoltDB(testDB)
+	db, err := NewDB(testDB)
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -142,7 +142,7 @@ func TestBoltDB_GetSetBytes(t *testing.T) {
 	tempDir := t.TempDir()
 	testDB := tempDir + "/test.db"
 
-	db, err := NewBoltDB(testDB)
+	db, err := NewDB(testDB)
 	require.NoError(t, err)
 	defer db.Close()
 
