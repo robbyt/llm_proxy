@@ -125,13 +125,9 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 }
 
 // startProxy receives a pointer to a proxy object, runs it, and handles the shutdown signal
-func startProxy(p *px.Proxy) error {
-	// setup background signal handler for clean shutdown
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
-
+func startProxy(p *px.Proxy, shutdown chan os.Signal) error {
 	go func() {
-		<-ch
+		<-shutdown
 		log.Info("Received SIGINT, shutting down now...")
 
 		// Then close all of the addon connections
@@ -166,12 +162,16 @@ func startProxy(p *px.Proxy) error {
 
 // Run is the main entry point for the proxy, configures the proxy and runs it
 func Run(cfg *config.Config) error {
+	// setup background signal handler for clean shutdown
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+
 	p, err := configProxy(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to configure proxy: %v", err)
 	}
 
-	if err := startProxy(p); err != nil {
+	if err := startProxy(p, shutdown); err != nil {
 		return fmt.Errorf("failed to start proxy: %v", err)
 	}
 
