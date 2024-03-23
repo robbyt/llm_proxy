@@ -49,7 +49,7 @@ func (t *TrafficObject) HeaderString() string {
 // filterHeaders removes sensitive headers from the traffic object
 func (t *TrafficObject) filterHeaders() {
 	t.headerFilterDone.Do(func() {
-		log.Debugf("Filtering headers from log output: %v", t.headersToFilter)
+		log.Debugf("Filtering headers: %v", t.headersToFilter)
 		for _, header := range t.headersToFilter {
 			t.Header.Del(header)
 		}
