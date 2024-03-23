@@ -49,69 +49,69 @@ func TestBoltDB_GetSetStr(t *testing.T) {
 	defer db.Close()
 
 	t.Run("normal set and get", func(t *testing.T) {
-		err = db.SetStr(t.Name(), "key", "value")
+		err = db.SetBytes(t.Name(), []byte("key"), []byte("value"))
 		require.NoError(t, err)
 
-		val, err := db.GetStr(t.Name(), "key")
+		val, err := db.GetBytes(t.Name(), []byte("key"))
 		require.NoError(t, err)
 		assert.Equal(t, "value", string(val))
 
-		val, err = db.GetStrSafe(t.Name(), "key")
+		val, err = db.GetBytesSafe(t.Name(), []byte("key"))
 		require.NoError(t, err)
 		assert.Equal(t, "value", string(val))
 
 		err = db.Delete(t.Name(), []byte("key"))
 		require.NoError(t, err)
 
-		val, err = db.GetStrSafe(t.Name(), "key")
+		val, err = db.GetBytesSafe(t.Name(), []byte("key"))
 		require.NoError(t, err)
 		assert.Nil(t, val)
 	})
 
 	t.Run("set and get empty string", func(t *testing.T) {
-		err = db.SetStr(t.Name(), "key", "")
+		err = db.SetBytes(t.Name(), []byte("key"), []byte(""))
 		require.NoError(t, err)
 
-		val, err := db.GetStr(t.Name(), "key")
+		val, err := db.GetBytes(t.Name(), []byte("key"))
 		require.NoError(t, err)
 		assert.Equal(t, "", string(val))
 	})
 
 	t.Run("set and get empty key", func(t *testing.T) {
-		err = db.SetStr(t.Name(), "", "value")
+		err = db.SetBytes(t.Name(), []byte(""), []byte("value"))
 		require.NoError(t, err)
 
-		val, err := db.GetStr(t.Name(), "")
+		val, err := db.GetBytes(t.Name(), []byte(""))
 		require.NoError(t, err)
 		assert.Equal(t, "value", string(val))
 	})
 
 	t.Run("set and get empty key and value", func(t *testing.T) {
-		err = db.SetStr(t.Name(), "", "")
+		err = db.SetBytes(t.Name(), []byte(""), []byte(""))
 		require.NoError(t, err)
 
-		val, err := db.GetStr(t.Name(), "")
+		val, err := db.GetBytes(t.Name(), []byte(""))
 		require.NoError(t, err)
 		assert.Equal(t, "", string(val))
 	})
 
 	t.Run("set and get empty bucket", func(t *testing.T) {
-		err = db.SetStr("", "key", "value")
+		err = db.SetBytes("", []byte("key"), []byte("value"))
 		require.Error(t, err)
 	})
 
 	t.Run("set and get empty bucket and key", func(t *testing.T) {
-		err = db.SetStr("", "", "value")
+		err = db.SetBytes("", []byte(""), []byte("value"))
 		require.Error(t, err)
 	})
 
 	t.Run("set and get empty bucket and key and value", func(t *testing.T) {
-		err = db.SetStr("", "", "")
+		err = db.SetBytes("", []byte(""), []byte(""))
 		require.Error(t, err)
 	})
 
 	t.Run("set and get using StrSafe", func(t *testing.T) {
-		val, err := db.GetStrSafe(t.Name(), "key")
+		val, err := db.GetBytesSafe(t.Name(), []byte("key"))
 		require.NoError(t, err)
 		assert.Nil(t, val)
 	})

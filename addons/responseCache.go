@@ -2,6 +2,9 @@ package addons
 
 import (
 	"fmt"
+	"net/http"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -48,9 +51,29 @@ func (mca *ResponseCacheAddon) Request(f *px.Flow) {
 	log.Debugf("cache miss for: %s", f.Request.URL)
 }
 
+var responseCodesToCache = []int{http.StatusOK, http.StatusAccepted, http.StatusCreated, http.StatusNoContent}
+
 func (c *ResponseCacheAddon) Response(f *px.Flow) {
 	go func() {
 		<-f.Done()
+		if f.Response == nil {
+			log.Debugf("skipping cache storage for nil response: %s", f.Request.URL)
+			return
+		}
+
+		shouldCache := false
+		for _, respCode := range responseCodesToCache {
+			if f.Response.StatusCode == respCode {
+				shouldCache = true
+				break
+			}
+		}
+
+		if !shouldCache {
+			log.Debugf("skipping cache storage for non-200 response: %s", f.Request.URL)
+			return
+		}
+
 		if err := c.cache.Put(*f.Request, f.Response); err != nil {
 			log.Errorf("error storing response in cache: %s", err)
 		}
@@ -70,6 +93,26 @@ func (d *ResponseCacheAddon) Close() error {
 	return nil
 }
 
+func cleanCacheDir(cacheDir string) (string, error) {
+	if cacheDir == "" {
+		cacheDir = "."
+	}
+
+	invalidChars := []string{"<", ">", ":", "\"", "\\", "|", "?", "*", "!", "+", "`", "'"}
+	for _, char := range invalidChars {
+		if strings.Contains(cacheDir, char) {
+			return "", fmt.Errorf("filename contains invalid character: %s", char)
+		}
+	}
+
+	cacheDir, err := filepath.Abs(cacheDir)
+	if err != nil {
+		return "", err
+	}
+
+	return cacheDir, nil
+}
+
 func NewCacheAddon(
 	storageEngineName string, // name of the storage engine to use
 	cacheDir string, // output & cache storage directory
@@ -77,6 +120,10 @@ func NewCacheAddon(
 ) (*ResponseCacheAddon, error) {
 	var cacheDB cache.DB
 	var err error
+	cacheDir, err = cleanCacheDir(cacheDir)
+	if err != nil {
+		return nil, fmt.Errorf("error cleaning cache path: %s", err)
+	}
 
 	switch storageEngineName {
 	case "badger":

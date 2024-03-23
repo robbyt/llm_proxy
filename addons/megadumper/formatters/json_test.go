@@ -12,12 +12,12 @@ import (
 func TestJSONFormatter(t *testing.T) {
 	container := &schema.LogDumpContainer{
 		Request: &schema.TrafficObject{
-			Headers: http.Header{"ReqHeader": []string{"ReqValue"}},
-			Body:    "Request Body",
+			Header: http.Header{"ReqHeader": []string{"ReqValue"}},
+			Body:   "Request Body",
 		},
 		Response: &schema.TrafficObject{
-			Headers: http.Header{"RespHeader": []string{"RespValue"}},
-			Body:    "Response Body",
+			Header: http.Header{"RespHeader": []string{"RespValue"}},
+			Body:   "Response Body",
 		},
 	}
 	j := &JSON{}

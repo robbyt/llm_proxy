@@ -24,6 +24,11 @@ type BoltMetaDB struct {
 	once      sync.Once
 }
 
+// len return the number of items currently in the cache
+func (c *BoltMetaDB) len(identifier string) (int, error) {
+	return c.db.Len(identifier)
+}
+
 // Close closes all the BadgerDBs in the collection
 func (c *BoltMetaDB) Close() error {
 	var err error
@@ -56,12 +61,14 @@ func (c *BoltMetaDB) Get(req px.Request) (*px.Response, error) {
 		return nil, nil
 	}
 
+	// Decode the cached response from the gob object
 	decoder := gob.NewDecoder(bytes.NewReader(valueBytes))
 	var r px.Response // damn, maybe this won't work?
 	if err := decoder.Decode(&r); err != nil {
 		return nil, err
 	}
 
+	// return the cached response
 	return &r, nil
 }
 
@@ -73,11 +80,14 @@ func (c *BoltMetaDB) Put(req px.Request, resp *px.Response) error {
 		return fmt.Errorf("request URL is nil or empty")
 	}
 	identifier := req.URL.String()
-	body := req.Body
-	if len(body) == 0 {
-		// if the body is empty, use a single space as the key because badger doesn't support empty keys
-		body = []byte(" ")
-	}
+	reqBody := req.Body
+
+	/*
+		if len(body) == 0 {
+			// if the body is empty, use a single space as the key because badger doesn't support empty keys
+			body = []byte(" ")
+		}
+	*/
 
 	// Encode the response into a gob object, for storage in the targetDB
 	var reqBuffer bytes.Buffer
@@ -88,7 +98,7 @@ func (c *BoltMetaDB) Put(req px.Request, resp *px.Response) error {
 	}
 
 	// Store the encoded data in the targetDB
-	err = c.db.SetBytes(identifier, body, reqBuffer.Bytes())
+	err = c.db.SetBytes(identifier, reqBody, reqBuffer.Bytes())
 	if err != nil {
 		log.Fatal("set bytes error:", err)
 	}
