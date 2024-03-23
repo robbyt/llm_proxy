@@ -6,16 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewCacheConfig(t *testing.T) {
+func TestNewCacheStorageConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	cacheConfig, err := NewCacheConfig(tmpDir)
+	cacheConfig, err := NewCacheStorageConfig(tmpDir)
 	assert.NoError(t, err)
 	assert.NotNil(t, cacheConfig)
 	assert.Equal(t, tmpDir+"/cache", cacheConfig.StoragePath)
 
 	// test loading from an existing file
-	cacheConfig2, err := NewCacheConfig(tmpDir)
+	cacheConfig2, err := NewCacheStorageConfig(tmpDir)
 	assert.NoError(t, err)
 	assert.NotNil(t, cacheConfig2)
 	assert.Equal(t, cacheConfig.ConfigVersion, cacheConfig2.ConfigVersion)
@@ -26,21 +26,21 @@ func TestNewCacheConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	// load the file again, and check the result from the loaded file
-	cacheConfig3, err := NewCacheConfig(tmpDir)
+	cacheConfig3, err := NewCacheStorageConfig(tmpDir)
 	assert.NoError(t, err)
 	assert.NotNil(t, cacheConfig3)
 	assert.Equal(t, cacheConfig2.ConfigVersion, cacheConfig3.ConfigVersion)
 
 }
 
-func TestCacheConfig_SaveAndLoad(t *testing.T) {
+func TestCacheStorageConfig_SaveAndLoad(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	cacheConfig, _ := NewCacheConfig(tmpDir)
+	cacheConfig, _ := NewCacheStorageConfig(tmpDir)
 	err := cacheConfig.Save()
 	assert.NoError(t, err)
 
-	loadedCacheConfig := &CacheConfig{filePath: cacheConfig.filePath}
+	loadedCacheConfig := &CacheStorageConfig{filePath: cacheConfig.filePath}
 	err = loadedCacheConfig.Load()
 	assert.NoError(t, err)
 

@@ -17,14 +17,8 @@ const (
 	defaultStorageEngineName = "bolt"
 )
 
-// cacheBehavior stores input args config for the cache
-type cacheBehavior struct {
-	Dir string // Directory to store the cache files
-	TTL int64  // Time to live for cache files in seconds (0 means cache forever)
-}
-
-// CacheConfig is a struct that backs a llm_proxy_cache.json file, which configures the cache storage object
-type CacheConfig struct {
+// CacheStorageConfig is a struct that backs a llm_proxy_cache.json file, which configures the cache storage object
+type CacheStorageConfig struct {
 	filePath       string `json:"-"`               // The full path of this cache index json file.
 	ConfigVersion  string `json:"config_version"`  // The schema version of this cache index file.
 	StorageEngine  string `json:"storage_engine"`  // The storage engine used for this cache
@@ -33,7 +27,7 @@ type CacheConfig struct {
 }
 
 // Save writes the cache config json file to disk
-func (i CacheConfig) Save() error {
+func (i CacheStorageConfig) Save() error {
 	// Ensure the storage path subdirectory exists
 	if err := os.MkdirAll(filepath.Dir(i.StoragePath), 0700); err != nil {
 		return err
@@ -68,7 +62,7 @@ func (i CacheConfig) Save() error {
 }
 
 // Load reads the cache config json file from disk
-func (i *CacheConfig) Load() error {
+func (i *CacheStorageConfig) Load() error {
 	existingFilePath := i.filePath
 	jsonData, err := os.ReadFile(existingFilePath)
 	if err != nil {
@@ -83,14 +77,14 @@ func (i *CacheConfig) Load() error {
 	return nil
 }
 
-// NewCacheConfig creates a new IndexFile object to help with loading/saving meta-state as a json file.
+// NewCacheStorageConfig creates a new IndexFile object to help with loading/saving meta-state as a json file.
 // This object's purpose is to help loading the other database objects by pointing to their
 // connection settings or file paths.
 //
 // cacheDir: the directory where the cache index file will be stored
-func NewCacheConfig(cacheDir string) (*CacheConfig, error) {
+func NewCacheStorageConfig(cacheDir string) (*CacheStorageConfig, error) {
 	indexFilePath := filepath.Join(cacheDir, cacheConfigFileName)
-	iFile := &CacheConfig{
+	iFile := &CacheStorageConfig{
 		filePath:       indexFilePath,
 		ConfigVersion:  currentCacheConfigVer,
 		StorageEngine:  defaultStorageEngineName,

@@ -86,7 +86,7 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 	log.Debugf("AppMode set to: %v", cfg.AppMode)
 	switch cfg.AppMode {
 	case config.CacheMode:
-		cacheConfig, err := config.NewCacheConfig(cfg.Cache.Dir)
+		cacheConfig, err := config.NewCacheStorageConfig(cfg.Cache.Dir)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cache config: %v", err)
 		}
@@ -94,7 +94,7 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 		cacheAddon, err := addons.NewCacheAddon(
 			cacheConfig.StorageEngine,
 			cacheConfig.StoragePath,
-			cfg.FilterReqHeaders,
+			cfg.FilterReqHeaders, // filters from logging, bc we want to filter cache same as the logs
 			cfg.FilterRespHeaders,
 		)
 		if err != nil {
