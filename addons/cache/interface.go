@@ -1,15 +1,11 @@
 package cache
 
 import (
-	px "github.com/kardianos/mitmproxy/proxy"
+	"github.com/robbyt/llm_proxy/schema"
 )
 
 type DB interface {
 	Close() error
-	// GetStr(url string, key string) ([]byte, error)
-	// GetBytes(url string, key []byte) ([]byte, error)
-	// SetStr(url string, key string, value []byte) error
-	// SetBytes(url string, key []byte, value []byte) error
-	Get(req px.Request) (*px.Response, error)
-	Put(req px.Request, resp *px.Response) error
+	Get(request *schema.TrafficObject) (response *schema.TrafficObject, err error)
+	Put(request *schema.TrafficObject, response *schema.TrafficObject) error
 }

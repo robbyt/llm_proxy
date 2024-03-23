@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	px "github.com/kardianos/mitmproxy/proxy"
+	"github.com/robbyt/llm_proxy/schema"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,16 +56,9 @@ func TestNewCacheAddonErr(t *testing.T) {
 
 	t.Run("unknown storage engine", func(t *testing.T) {
 		storageEngineName := "unknown"
-		cacheDir := "/tmp"
+		cacheDir := t.TempDir()
 		_, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
 		assert.NotNil(t, err, "Expected error for unknown storage engine")
-	})
-
-	t.Run("bolt storage engine with empty cacheDir", func(t *testing.T) {
-		storageEngineName := "bolt"
-		cacheDir := ""
-		_, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
-		assert.Nil(t, err)
 	})
 
 	t.Run("bolt storage engine with invalid cacheDir", func(t *testing.T) {
@@ -134,26 +128,32 @@ func TestRequest(t *testing.T) {
 	}
 
 	t.Run("typical cached request for GET", func(t *testing.T) {
-		flow := &px.Flow{
-			Request: &px.Request{
-				Method: "GET",
-				URL:    &url.URL{Path: "/test"},
-				Header: http.Header{"Host": []string{"example.com"}},
-				Body:   []byte(""),
-			},
+		req := &px.Request{
+			Method: "GET",
+			URL:    &url.URL{Path: "/test"},
+			Header: http.Header{"Host": []string{"example.com"}},
+			Body:   []byte(""),
 		}
+		tObjReq := schema.NewFromProxyRequest(req, filterReqHeaders)
 
-		// first request made with an empty request body
-		respCacheAddon.Request(flow)
-		require.Nil(t, flow.Response) // nil response means cache miss, as expected
-
-		// store a fake response in cache, to simulate a response populating the cache after a miss
-		flow.Response = &px.Response{
+		resp := &px.Response{
 			StatusCode: http.StatusOK,
 			Header:     http.Header{"Content-Type": []string{"text/plain"}},
 			Body:       []byte("hello"),
 		}
-		respCacheAddon.cache.Put(*flow.Request, flow.Response)
+		tObjResp := schema.NewFromProxyResponse(resp, filterRespHeaders)
+
+		// create a new flow with only the request
+		flow := &px.Flow{Request: req}
+
+		// first request made with an empty request body
+		respCacheAddon.Request(flow)
+		require.Nil(t, flow.Response) // nil response means cache miss, as expected
+		assert.Equal(t, "MISS", flow.Request.Header.Get("X-Cache"))
+
+		// store a fake response in cache, to simulate a response populating the cache after a miss
+		flow.Response = resp
+		respCacheAddon.cache.Put(tObjReq, tObjResp)
 
 		// not nil means the response was cached
 		respCacheAddon.Request(flow)

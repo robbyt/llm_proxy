@@ -1,16 +1,14 @@
 package cache
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"path/filepath"
 	"sync"
 
-	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/robbyt/llm_proxy/addons/cache/storage/boltDB_Engine"
+	"github.com/robbyt/llm_proxy/schema"
 )
 
 const (
@@ -19,9 +17,10 @@ const (
 
 // BoltMetaDB is a single boltDB with multiple internal "buckets" for each URL (like tables)
 type BoltMetaDB struct {
-	dbFileDir string            // several DBs stored in the same directory, one for each base URL
-	db        *boltDB_Engine.DB // the main db struct
-	once      sync.Once
+	filterRespHeaders []string          // filter these headers when pulling from cache
+	dbFileDir         string            // several DBs stored in the same directory, one for each base URL
+	db                *boltDB_Engine.DB // the main db struct
+	once              sync.Once
 }
 
 // len return the number of items currently in the cache
@@ -44,15 +43,15 @@ func (c *BoltMetaDB) Close() error {
 //
 // The request URL can be considered the primary index (different files per URL),
 // and the body is the secondary index.
-func (c *BoltMetaDB) Get(req px.Request) (*px.Response, error) {
-	if req.URL == nil || req.URL.String() == "" {
+func (c *BoltMetaDB) Get(request *schema.TrafficObject) (response *schema.TrafficObject, err error) {
+	if request.URL == nil || request.URL.String() == "" {
 		return nil, fmt.Errorf("request URL is nil or empty")
 	}
 
-	identifier := req.URL.String()
-	body := req.Body
+	identifier := request.URL.String()
+	body := request.Body
 
-	valueBytes, err := c.db.GetBytesSafe(identifier, body)
+	valueBytes, err := c.db.GetBytesSafe(identifier, []byte(body))
 	if err != nil {
 		return nil, err
 	}
@@ -61,44 +60,32 @@ func (c *BoltMetaDB) Get(req px.Request) (*px.Response, error) {
 		return nil, nil
 	}
 
-	// Decode the cached response from the gob object
-	decoder := gob.NewDecoder(bytes.NewReader(valueBytes))
-	var r px.Response // damn, maybe this won't work?
-	if err := decoder.Decode(&r); err != nil {
-		return nil, err
+	newResponse, err := schema.NewFromJSONBytes(valueBytes, c.filterRespHeaders)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling response: %s", err)
 	}
 
-	// return the cached response
-	return &r, nil
+	// return the cached response, as a traffic object
+	return newResponse, nil
 }
 
 // Put receives a request and response, pulls out the request URL, uses that
 // URL as a cache "identifier" (to use the correct storage DB), and then stores
 // the response in cache based on the request body.
-func (c *BoltMetaDB) Put(req px.Request, resp *px.Response) error {
-	if req.URL == nil || req.URL.String() == "" {
+func (c *BoltMetaDB) Put(request *schema.TrafficObject, response *schema.TrafficObject) error {
+	if request.URL == nil || request.URL.String() == "" {
 		return fmt.Errorf("request URL is nil or empty")
 	}
-	identifier := req.URL.String()
-	reqBody := req.Body
-
-	/*
-		if len(body) == 0 {
-			// if the body is empty, use a single space as the key because badger doesn't support empty keys
-			body = []byte(" ")
-		}
-	*/
-
-	// Encode the response into a gob object, for storage in the targetDB
-	var reqBuffer bytes.Buffer
-	enc := gob.NewEncoder(&reqBuffer)
-	err := enc.Encode(req) // encode the request into a buffer object
-	if err != nil {
-		log.Fatal("encode error:", err)
-	}
+	identifier := request.URL.String()
+	reqBody := []byte(request.Body)
 
 	// Store the encoded data in the targetDB
-	err = c.db.SetBytes(identifier, reqBody, reqBuffer.Bytes())
+	respJSON, err := response.ToJSON()
+	if err != nil {
+		return fmt.Errorf("error marshalling response object: %s", err)
+	}
+
+	err = c.db.SetBytes(identifier, reqBody, respJSON)
 	if err != nil {
 		log.Fatal("set bytes error:", err)
 	}
@@ -108,15 +95,16 @@ func (c *BoltMetaDB) Put(req px.Request, resp *px.Response) error {
 }
 
 // NewBoltMetaDB creates a new BoltMetaDB object, to load or create a new boltDB on disk
-func NewBoltMetaDB(dbFileDir string) (*BoltMetaDB, error) {
+func NewBoltMetaDB(dbFileDir string, filterRespHeaders []string) (*BoltMetaDB, error) {
 	dbFile := filepath.Join(dbFileDir, defaultBoltDBFile)
 	db, err := boltDB_Engine.NewDB(dbFile)
 	if err != nil {
 		return nil, fmt.Errorf("error opening/creating db: %s", err)
 	}
 	bMeta := &BoltMetaDB{
-		dbFileDir: dbFileDir,
-		db:        db,
+		filterRespHeaders: filterRespHeaders,
+		dbFileDir:         dbFileDir,
+		db:                db,
 	}
 	return bMeta, nil
 }

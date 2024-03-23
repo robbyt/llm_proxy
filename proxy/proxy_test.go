@@ -173,16 +173,20 @@ func TestProxyCache(t *testing.T) {
 	body1, err := io.ReadAll(resp1.Body)
 	require.NoError(t, err)
 	assert.Equal(t, []byte("hits: 1\n"), body1)
+	assert.Equal(t, int32(1), hitCounter.Load())
+	assert.Equal(t, resp1.Header.Get("X-Cache"), "MISS")
 
 	// make another request using that client, through the proxy
 	resp2, err := client.Get("http://" + testServerListenAddr)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp2.StatusCode)
 
-	// check the response body from req2 (should be the cached version)
+	// check the response body from req2 (should be the cached response with value=1, not the incremented value 2)
 	body2, err := io.ReadAll(resp2.Body)
 	require.NoError(t, err)
 	assert.Equal(t, []byte("hits: 1\n"), body2)
+	assert.Equal(t, int32(1), hitCounter.Load()) // the counter should not have incremented because the server shouldn't have been hit
+	assert.Equal(t, resp2.Header.Get("X-Cache"), "HIT")
 
 	// done with tests, send shutdown signals
 	t.Cleanup(func() {

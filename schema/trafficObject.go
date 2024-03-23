@@ -29,6 +29,14 @@ func (t *TrafficObject) ToJSON() ([]byte, error) {
 	return json.Marshal(t)
 }
 
+func (t *TrafficObject) ToProxyResponse() *px.Response {
+	return &px.Response{
+		StatusCode: t.StatusCode,
+		Header:     t.Header,
+		Body:       []byte(t.Body),
+	}
+}
+
 // HeaderString returns the headers as a flat string
 func (t *TrafficObject) HeaderString() string {
 	buf := new(bytes.Buffer)
