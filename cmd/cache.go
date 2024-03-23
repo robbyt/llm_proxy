@@ -47,7 +47,7 @@ func init() {
 		"Request headers that match these strings will not be logged (but will still be proxied)",
 	)
 	cacheCmd.Flags().StringSliceVarP(
-		&cfg.FilterRespHeaders, "filter-resp-headers", "", []string{},
+		&cfg.FilterRespHeaders, "filter-resp-headers", "", cfg.FilterRespHeaders,
 		"Response headers that match these strings will not be logged (but will still be proxied)",
 	)
 }
