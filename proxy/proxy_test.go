@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"testing"
@@ -31,8 +32,7 @@ func webServer(hitCounter *atomic.Int32) (*http.Server, func()) {
 		// increment the counter
 		hitCounter.Add(1)
 		resp := fmt.Sprintf("hits: %d\n", hitCounter.Load())
-
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(resp))
 	})
 
@@ -66,11 +66,11 @@ func httpClient(proxyAddr string) (*http.Client, error) {
 
 	return &http.Client{
 		Transport: transport,
+		Timeout:   10 * http.DefaultClient.Timeout,
 	}, nil
 }
 
 func TestProxySimple(t *testing.T) {
-
 	// Create a simple proxy config
 	cfg := config.NewDefaultConfig()
 	cfg.CertDir = t.TempDir()
@@ -103,25 +103,33 @@ func TestProxySimple(t *testing.T) {
 	client, err := httpClient("http://" + cfg.Listen)
 	require.NoError(t, err)
 
-	// make a request using that client, through the proxy
-	resp1, err := client.Get("http://" + testServerListenAddr)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp1.StatusCode)
+	t.Run("TestSimpleProxy", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
+		// make a request using that client, through the proxy
+		resp, err := client.Post("http://"+testServerListenAddr, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
 
-	// check the response body from req1
-	body1, err := io.ReadAll(resp1.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("hits: 1\n"), body1)
+		// check the response body from req1
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load())
+	})
 
-	// make another request using that client, through the proxy
-	resp2, err := client.Get("http://" + testServerListenAddr)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
+	t.Run("TestSimpleProxy2", func(t *testing.T) {
+		hitCounter.Store(5) // reset the counter
+		// make another request using that client, through the proxy
+		resp, err := client.Post("http://"+testServerListenAddr, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
 
-	// check the response body from req2
-	body2, err := io.ReadAll(resp2.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("hits: 2\n"), body2)
+		// check the response body from req2
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 6\n"), body)
+		assert.Equal(t, int32(6), hitCounter.Load())
+	})
 
 	// done with tests, send shutdown signals
 	t.Cleanup(func() {
@@ -164,29 +172,35 @@ func TestProxyCache(t *testing.T) {
 	client, err := httpClient("http://" + cfg.Listen)
 	require.NoError(t, err)
 
-	// make a request using that client, through the proxy
-	resp1, err := client.Get("http://" + testServerListenAddr)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp1.StatusCode)
+	t.Run("TestCacheMiss", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
+		// make a request using that client, through the proxy
+		resp, err := client.Post("http://"+testServerListenAddr, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
 
-	// check the response body from req1
-	body1, err := io.ReadAll(resp1.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("hits: 1\n"), body1)
-	assert.Equal(t, int32(1), hitCounter.Load())
-	assert.Equal(t, resp1.Header.Get("X-Cache"), "MISS")
+		// check the response body from req1
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load())
+		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
+	})
 
-	// make another request using that client, through the proxy
-	resp2, err := client.Get("http://" + testServerListenAddr)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
+	t.Run("TestCacheHit", func(t *testing.T) {
+		hitCounter.Store(5) // reset the counter
+		// make another request using that client, through the proxy
+		resp, err := client.Post("http://"+testServerListenAddr, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
 
-	// check the response body from req2 (should be the cached response with value=1, not the incremented value 2)
-	body2, err := io.ReadAll(resp2.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("hits: 1\n"), body2)
-	assert.Equal(t, int32(1), hitCounter.Load()) // the counter should not have incremented because the server shouldn't have been hit
-	assert.Equal(t, resp2.Header.Get("X-Cache"), "HIT")
+		// check the response body from req2 (should be the cached response with value=1, not the incremented value 2)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(5), hitCounter.Load()) // the counter should not be 6, because we got a cache hit
+		assert.Equal(t, "HIT", resp.Header.Get("X-Cache"))
+	})
 
 	// done with tests, send shutdown signals
 	t.Cleanup(func() {
