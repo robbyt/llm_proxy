@@ -11,7 +11,7 @@ import (
 	"github.com/robbyt/llm_proxy/schema/utils"
 )
 
-const SchemaVersion string = "v1"
+const SchemaVersion string = "v2"
 
 // LogDumpContainer holds the request and response data for a given flow
 type LogDumpContainer struct {
