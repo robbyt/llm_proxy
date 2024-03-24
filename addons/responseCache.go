@@ -35,8 +35,7 @@ type ResponseCacheAddon struct {
 func (c *ResponseCacheAddon) Request(f *px.Flow) {
 	// Only cache these request methods (and empty string for GET)
 	if _, ok := cacheOnlyMethods[f.Request.Method]; !ok {
-		log.Debugf(
-			"skipping cache lookup for unsupported method: %s %s", f.Request.Method, f.Request.URL)
+		log.Debugf("skipping cache lookup for unsupported method: %s %s", f.Request.Method, f.Request.URL)
 		return
 	}
 
