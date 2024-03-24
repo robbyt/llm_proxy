@@ -13,8 +13,8 @@ import (
 
 // DB is a wrapper for the DB database library
 type DB struct {
-	db   *bolt.DB
-	once sync.Once
+	db        *bolt.DB
+	closeOnce sync.Once
 }
 
 func (b *DB) Len(identifier string) (int, error) {
@@ -97,9 +97,8 @@ func (b *DB) SetBytes(identifier string, key, value []byte) error {
 }
 
 // Close closes the database and runs other cleanup tasks
-func (b *DB) Close() error {
-	var err error
-	b.once.Do(func() {
+func (b *DB) Close() (err error) {
+	b.closeOnce.Do(func() {
 		errClose := b.db.Close()
 		if errClose != nil {
 			err = fmt.Errorf("error closing db: %s", errClose)
