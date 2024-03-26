@@ -54,113 +54,132 @@ func TestNewCacheAddonErr(t *testing.T) {
 	filterReqHeaders := []string{"header1", "header2"}
 	filterRespHeaders := []string{"header1", "header2"}
 
+	t.Run("empty storage engine", func(t *testing.T) {
+		storageEngineName := ""
+		cacheDir := t.TempDir()
+		cache, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
+		assert.Error(t, err, "Expected error for empty storage engine")
+		assert.Nil(t, cache)
+	})
+
 	t.Run("unknown storage engine", func(t *testing.T) {
 		storageEngineName := "unknown"
 		cacheDir := t.TempDir()
-		_, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
-		assert.NotNil(t, err, "Expected error for unknown storage engine")
+		cache, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
+		assert.Error(t, err, "Expected error for unknown storage engine")
+		assert.Nil(t, cache)
 	})
 
 	t.Run("bolt storage engine with invalid cacheDir", func(t *testing.T) {
 		storageEngineName := "bolt"
 		cacheDir := "\\\\invalid\\path"
-		_, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
-		assert.NotNil(t, err, "Expected error for invalid cacheDir")
+		cache, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
+		assert.Error(t, err, "Expected error for invalid cacheDir")
+		assert.Nil(t, cache)
 	})
 
 	t.Run("bolt storage engine with valid cacheDir", func(t *testing.T) {
 		storageEngineName := "bolt"
 		cacheDir := t.TempDir()
-		_, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
-		assert.Nil(t, err, "Expected no error for valid cacheDir")
+		cache, err := NewCacheAddon(storageEngineName, cacheDir, filterReqHeaders, filterRespHeaders)
+		assert.NoError(t, err, "Expected no error for valid cacheDir")
+		assert.NotNil(t, cache)
+		assert.Equal(t, "ResponseCacheAddon", cache.String())
 	})
 }
 
 func TestRequest(t *testing.T) {
-	/*
-		reqEmptyBody := &px.Request{
-			Method: "GET",
-			URL:    &url.URL{Path: "/test"},
-			Header: http.Header{"Host": []string{"example.com"}},
-			Body:   []byte(""),
-		}
-
-		reqNormBodyURL1 := &px.Request{
-			Method: "GET",
-			URL:    &url.URL{Path: "/test"},
-			Header: http.Header{"Host": []string{"example.com"}},
-			Body:   []byte("hello"),
-		}
-
-		reqNormBodyURL2 := &px.Request{
-			Method: "GET",
-			URL:    &url.URL{Path: "/test2"},
-			Header: http.Header{"Host": []string{"example.com"}},
-			Body:   []byte("hello"),
-		}
-
-		respEmpty := &px.Response{
-			StatusCode: 200,
-			Header:     http.Header{"Content-Type": []string{"text/plain"}},
-			Body:       []byte(""),
-		}
-
-		respNormal := &px.Response{
-			StatusCode: 200,
-			Header:     http.Header{"Content-Type": []string{"text/plain"}},
-			Body:       []byte("hello"),
-		}
-
-		respErr := &px.Response{
-			StatusCode: 500,
-			Header:     http.Header{"Content-Type": []string{"text/plain"}},
-			Body:       []byte("error"),
-		}
-	*/
-
-	storageEngine := "bolt"
 	tmpDir := t.TempDir()
-	filterReqHeaders := []string{"header1", "header2"}
-	filterRespHeaders := []string{"header1", "header2"}
-	respCacheAddon, err := NewCacheAddon(storageEngine, tmpDir, filterReqHeaders, filterRespHeaders)
-	if err != nil {
-		t.Fatal(err)
-	}
+	filterReqHeaders := []string{"Header1"}
+	filterRespHeaders := []string{"Header2"}
+	respCacheAddon, err := NewCacheAddon(
+		"bolt", tmpDir,
+		filterReqHeaders, filterRespHeaders,
+	)
+	require.Nil(t, err)
 
-	t.Run("typical cached request for GET", func(t *testing.T) {
-		req := &px.Request{
-			Method: "GET",
-			URL:    &url.URL{Path: "/test"},
-			Header: http.Header{"Host": []string{"example.com"}},
-			Body:   []byte(""),
+	t.Run("cache miss", func(t *testing.T) {
+		// first request made with an empty request body
+		flow := &px.Flow{
+			Request: &px.Request{
+				Method: "POST",
+				URL:    &url.URL{Path: "/test"},
+				Header: http.Header{
+					"Host":    []string{"example.com"},
+					"header1": []string{"value1"},
+				},
+				Body: []byte("req"),
+			},
 		}
-		tObjReq := schema.NewFromProxyRequest(req, filterReqHeaders)
+		require.Empty(t, flow.Request.Header.Get("X-Cache"))
 
+		// simulate the request hitting the addon
+		respCacheAddon.Request(flow)
+		require.Nil(t, flow.Response) // nil response means cache miss
+		require.NotEmpty(t, flow.Request.Header.Get("X-Cache"))
+		assert.Equal(t, "MISS", flow.Request.Header.Get("X-Cache"))
+	})
+
+	t.Run("cache hit", func(t *testing.T) {
+		// simulate a response populating the cache after a miss
+		flow := &px.Flow{
+			Request: &px.Request{
+				Method: "POST",
+				URL:    &url.URL{Path: "/test"},
+				Header: http.Header{
+					"Host":    []string{"example.com"},
+					"Header1": []string{"value1"},
+					"Header2": []string{"value2"},
+				},
+				Body: []byte("req"),
+			},
+		}
 		resp := &px.Response{
 			StatusCode: http.StatusOK,
-			Header:     http.Header{"Content-Type": []string{"text/plain"}},
-			Body:       []byte("hello"),
+			Header: http.Header{
+				"Content-Type": []string{"text/plain"},
+				"Header1":      []string{"value1"},
+				"Header2":      []string{"value2"},
+			},
+			Body: []byte("resp"),
 		}
-		tObjResp := schema.NewFromProxyResponse(resp, filterRespHeaders)
+		identifier := flow.Request.URL.String()
 
-		// create a new flow with only the request
-		flow := &px.Flow{Request: req}
+		// unable to check length, because bucket doesn't yet exist in cache
+		len, err := respCacheAddon.cache.Len(flow.Request.URL.String())
+		require.Error(t, err)
+		require.Zero(t, len)
 
-		// first request made with an empty request body
-		respCacheAddon.Request(flow)
-		require.Nil(t, flow.Response) // nil response means cache miss, as expected
-		assert.Equal(t, "MISS", flow.Request.Header.Get("X-Cache"))
+		// create traffic objects for the request and response, check filtering
+		tReq := schema.NewFromProxyRequest(flow.Request, filterReqHeaders)
+		require.Empty(t, tReq.Header.Get("X-Cache"))
+		require.Empty(t, tReq.Header.Get("header1"))    // deleted by filterReqHeaders
+		require.NotEmpty(t, tReq.Header.Get("header2")) // not deleted by filterReqHeaders
 
-		// store a fake response in cache, to simulate a response populating the cache after a miss
-		flow.Response = resp
-		respCacheAddon.cache.Put(tObjReq, tObjResp)
+		tResp := schema.NewFromProxyResponse(resp, filterRespHeaders)
+		require.Empty(t, tResp.Header.Get("X-Cache"))
+		require.NotEmpty(t, tResp.Header.Get("header1")) // not deleted by filterRespHeaders
+		require.Empty(t, tResp.Header.Get("header2"))    // deleted by filterRespHeaders
 
-		// not nil means the response was cached
+		// store the response in cache using an internal method, to simulate the real response storage
+		respCacheAddon.cache.Put(tReq, tResp)
+
+		// check length again, should work now
+		len, err = respCacheAddon.cache.Len(identifier)
+		require.NoError(t, err)
+		require.Equal(t, 1, len)
+
+		// simulate a new request with the same URL, should be a hit now that it's in the cache
+		require.Empty(t, resp.Header.Get("X-Cache"))
 		respCacheAddon.Request(flow)
 		require.NotNil(t, flow.Response)
-		assert.Equal(t, http.StatusOK, flow.Response.StatusCode)
-		assert.Equal(t, "text/plain", flow.Response.Header.Get("Content-Type"))
-		assert.Equal(t, "hello", string(flow.Response.Body))
+		assert.Equal(t, resp.StatusCode, flow.Response.StatusCode)
+		assert.Equal(t, resp.Body, flow.Response.Body)
+		assert.Equal(t, "HIT", flow.Response.Header.Get("X-Cache"))
 
+	})
+
+	t.Cleanup(func() {
+		respCacheAddon.Close()
 	})
 }

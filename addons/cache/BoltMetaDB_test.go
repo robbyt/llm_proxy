@@ -51,7 +51,7 @@ func TestBoltMetaDB_PutAndGet(t *testing.T) {
 		require.NotNil(t, trafficObjResp)
 
 		// empty cache
-		gotResp, err := bMeta.Get(trafficObjReq)
+		gotResp, err := bMeta.Get(trafficObjReq.URL.String(), []byte{})
 		require.NoError(t, err)
 		assert.Nil(t, gotResp)
 
@@ -62,10 +62,10 @@ func TestBoltMetaDB_PutAndGet(t *testing.T) {
 		// check the length of the cache for this URL, should have 1 record
 		len, err := bMeta.db.Len(req.URL.String())
 		require.NoError(t, err)
-		assert.Equal(t, 2, len) // not sure why this is 2, I assumed it should be 1
+		assert.Equal(t, 1, len)
 
 		// now use the Get method again to lookup the response
-		gotResp, err = bMeta.Get(trafficObjReq)
+		gotResp, err = bMeta.Get(trafficObjReq.URL.String(), []byte{})
 		require.NoError(t, err)
 		assert.Equal(t, resp.StatusCode, gotResp.StatusCode)
 		assert.Equal(t, resp.Header, gotResp.Header)

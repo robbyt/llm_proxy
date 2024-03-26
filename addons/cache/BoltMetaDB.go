@@ -24,7 +24,7 @@ type BoltMetaDB struct {
 }
 
 // len return the number of items currently in the cache
-func (c *BoltMetaDB) len(identifier string) (int, error) {
+func (c *BoltMetaDB) Len(identifier string) (int, error) {
 	return c.db.Len(identifier)
 }
 
@@ -43,14 +43,8 @@ func (c *BoltMetaDB) Close() error {
 //
 // The request URL can be considered the primary index (different files per URL),
 // and the body is the secondary index.
-func (c *BoltMetaDB) Get(request *schema.TrafficObject) (response *schema.TrafficObject, err error) {
-	if request.URL == nil || request.URL.String() == "" {
-		return nil, fmt.Errorf("request URL is nil or empty")
-	}
-
-	identifier := request.URL.String()
-	body := request.Body
-
+func (c *BoltMetaDB) Get(identifier string, body []byte) (response *schema.TrafficObject, err error) {
+	// check the db if a matching response exists
 	valueBytes, err := c.db.GetBytesSafe(identifier, []byte(body))
 	if err != nil {
 		return nil, err
