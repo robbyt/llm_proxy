@@ -114,7 +114,6 @@ func TestProxySimple(t *testing.T) {
 
 	// Start a basic web server on another port
 	hitCounter := new(atomic.Int32)
-
 	srv, srvShutdown := webServer(hitCounter, testServerPort)
 	require.NotNil(t, srv)
 	require.NotNil(t, srvShutdown)
@@ -201,12 +200,12 @@ func TestProxyCache(t *testing.T) {
 
 	t.Run("TestCacheMiss", func(t *testing.T) {
 		hitCounter.Store(0) // reset the counter
-		// make a request using that client, through the proxy
+		// make a request using the client, through the proxy
 		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-		// check the response body from req1
+		// check the response body from this request
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 		assert.Equal(t, []byte("hits: 1\n"), body)
@@ -216,12 +215,13 @@ func TestProxyCache(t *testing.T) {
 
 	t.Run("TestCacheHit", func(t *testing.T) {
 		hitCounter.Store(5) // reset the counter
-		// make another request using that client, through the proxy
+		// make another request using the client, through the proxy
 		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 
-		// check the response body from req2 (should be the cached response with value=1, not the incremented value 2)
+		// check the response body from this request
+		// (should be the cached response with value=1, not the incremented value)
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 		assert.Equal(t, []byte("hits: 1\n"), body)
