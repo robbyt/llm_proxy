@@ -23,6 +23,13 @@ var cacheOnlyMethods = map[string]struct{}{
 	"POST":    {},
 }
 
+var cacheOnlyResponseCodes = map[int]struct{}{
+	http.StatusOK:        {},
+	http.StatusAccepted:  {},
+	http.StatusCreated:   {},
+	http.StatusNoContent: {},
+}
+
 type ResponseCacheAddon struct {
 	px.BaseAddon
 	filterReqHeaders  []string
@@ -33,21 +40,23 @@ type ResponseCacheAddon struct {
 }
 
 func (c *ResponseCacheAddon) Request(f *px.Flow) {
-	// Only cache these request methods (and empty string for GET)
-	if _, ok := cacheOnlyMethods[f.Request.Method]; !ok {
-		log.Debugf("skipping cache lookup for unsupported method: %s %s", f.Request.Method, f.Request.URL)
+	if f.Request.URL == nil || f.Request.URL.String() == "" {
+		log.Errorf("request URL is nil or empty")
+		f.Response = &px.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       []byte("Request URL is empty"),
+		}
 		return
 	}
 
-	// convert the request to an internal TrafficObject
-	tObjReq := schema.NewFromProxyRequest(f.Request, c.filterReqHeaders)
-	if tObjReq == nil {
-		log.Errorf("error copying request to traffic object: %s", f.Request.URL)
+	// Only cache these request methods (and empty string for GET)
+	if _, ok := cacheOnlyMethods[f.Request.Method]; !ok {
+		log.Debugf("skipping cache lookup for unsupported method: %s %s", f.Request.URL, f.Request.Method)
 		return
 	}
 
 	// check the cache for responses matching this request
-	cacheLookup, err := c.cache.Get(tObjReq)
+	cacheLookup, err := c.cache.Get(f.Request.URL.String(), f.Request.Body)
 	if err != nil {
 		log.Errorf("error accessing cache, bypassing: %s", err)
 		return
@@ -65,9 +74,6 @@ func (c *ResponseCacheAddon) Request(f *px.Flow) {
 	f.Request.Header.Add("X-Cache", "MISS")
 	log.Debugf("cache miss for: %s", f.Request.URL)
 }
-
-// responseCodesToCache is a list of response codes that should be cached
-var responseCodesToCache = []int{http.StatusOK, http.StatusAccepted, http.StatusCreated, http.StatusNoContent}
 
 func (c *ResponseCacheAddon) Response(f *px.Flow) {
 	// if the response is nil, don't even try to cache it
@@ -93,14 +99,7 @@ func (c *ResponseCacheAddon) Response(f *px.Flow) {
 		}
 
 		// Only cache good response codes
-		shouldCache := false
-		for _, respCode := range responseCodesToCache {
-			if f.Response.StatusCode == respCode {
-				shouldCache = true
-				break
-			}
-		}
-
+		_, shouldCache := cacheOnlyResponseCodes[f.Response.StatusCode]
 		if !shouldCache {
 			f.Response.Header.Add("X-Cache", "SKIP")
 			log.Debugf("skipping cache storage for non-200 response: %s", f.Request.URL)

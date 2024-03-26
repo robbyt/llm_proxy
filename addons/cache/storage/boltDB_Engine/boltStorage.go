@@ -19,13 +19,6 @@ type DB struct {
 
 func (b *DB) Len(identifier string) (int, error) {
 	count := 0
-	b.db.View(func(tx *bolt.Tx) error {
-		return tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
-			count++
-			return nil
-		})
-	})
-
 	err := b.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(identifier))
 		if bucket == nil {
