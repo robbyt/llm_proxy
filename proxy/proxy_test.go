@@ -13,10 +13,16 @@ import (
 	"sync/atomic"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/robbyt/llm_proxy/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	// ugly hack to wait for background async
+	DefaultSleepTime = 1 * time.Second
 )
 
 // randomly finds an available port to bind to
@@ -111,6 +117,8 @@ func TestProxySimple(t *testing.T) {
 		err = startProxy(p, shutdown)
 		require.NoError(t, err)
 	}()
+	// terrible to add a sleep to a test, but this is a simple way to wait for the proxy
+	time.Sleep(DefaultSleepTime)
 
 	// Start a basic web server on another port
 	hitCounter := new(atomic.Int32)
@@ -187,6 +195,8 @@ func TestProxyCache(t *testing.T) {
 		err = startProxy(p, shutdown)
 		require.NoError(t, err)
 	}()
+	// terrible to add a sleep to a test, but this is a simple way to wait for the proxy
+	time.Sleep(DefaultSleepTime)
 
 	// Start a basic web server on another port
 	hitCounter := new(atomic.Int32)
@@ -214,18 +224,35 @@ func TestProxyCache(t *testing.T) {
 	})
 
 	t.Run("TestCacheHit", func(t *testing.T) {
-		hitCounter.Store(5) // reset the counter
-		// make another request using the client, through the proxy
+		hitCounter.Store(0) // reset the counter
+
+		// make a request using the client, through the proxy
 		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// check the response body from this request, should be a miss
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load())
+		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
+
+		// wait for the cache to be written
+		time.Sleep(DefaultSleepTime)
+
+		// now, this should be a cache hit...
+		// make another request using the client, through the proxy
+		resp, err = client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
 		require.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 
 		// check the response body from this request
 		// (should be the cached response with value=1, not the incremented value)
-		body, err := io.ReadAll(resp.Body)
+		body, err = io.ReadAll(resp.Body)
 		require.NoError(t, err)
 		assert.Equal(t, []byte("hits: 1\n"), body)
-		assert.Equal(t, int32(5), hitCounter.Load()) // the counter should not be 6, because we got a cache hit
+		assert.Equal(t, int32(1), hitCounter.Load()) // the counter should not be 6, because we got a cache hit
 		assert.Equal(t, "HIT", resp.Header.Get("X-Cache"))
 	})
 
