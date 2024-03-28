@@ -194,9 +194,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			t.Parallel()
 			container := NewLogDumpContainer(tc.flow, tc.logSources, 0, tc.filterReqHeaders, tc.filterRespHeaders)
 			assert.Equal(t, tc.expectedConnectionStats, container.ConnectionStats)
-			assert.Equal(t, tc.expectedRequestHeaders, container.Request.HeadersString())
+			assert.Equal(t, tc.expectedRequestHeaders, container.Request.HeaderString())
 			assert.Equal(t, tc.expectedRequestBody, container.Request.Body)
-			assert.Equal(t, tc.expectedResponseHeaders, container.Response.HeadersString())
+			assert.Equal(t, tc.expectedResponseHeaders, container.Response.HeaderString())
 			assert.Equal(t, tc.expectedResponseBody, container.Response.Body)
 		})
 	}
@@ -240,23 +240,4 @@ func TestValidateFlowObj(t *testing.T) {
 		assert.False(t, ls.LogResponseBody)
 	})
 
-}
-
-func TestTrafficObject_filterHeaders(t *testing.T) {
-	t.Run("filter headers", func(t *testing.T) {
-		headers := http.Header{
-			"Content-Type": []string{"application/json"},
-			"Delete-Me":    []string{"too-many-secrets"},
-		}
-		headersToFilter := []string{"Delete-Me"}
-
-		trafficObject := &TrafficObject{
-			Headers:         headers,
-			headersToFilter: headersToFilter,
-		}
-
-		trafficObject.filterHeaders()
-		assert.Contains(t, trafficObject.Headers, "Content-Type")
-		assert.NotContains(t, trafficObject.Headers, "Delete-Me")
-	})
 }

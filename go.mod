@@ -3,11 +3,13 @@ module github.com/robbyt/llm_proxy
 go 1.22.0
 
 require (
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/kardianos/mitmproxy v0.0.0-20220918004918-f6fc4ef7f430
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
+	go.etcd.io/bbolt v1.3.9
 )
 
 require (
