@@ -67,11 +67,11 @@ func (c *ResponseCacheAddon) Request(f *px.Flow) {
 		log.Debugf("cache hit for: %s", f.Request.URL)
 
 		// after setting the f.Response, other pending addons will be skipped!
-		cacheLookup.Header.Add("X-Cache", "HIT")
+		cacheLookup.Header.Set("X-Cache", "HIT")
 		f.Response = cacheLookup.ToProxyResponse()
 		return
 	}
-	f.Request.Header.Add("X-Cache", "MISS")
+	f.Request.Header.Set("X-Cache", "MISS")
 	log.Debugf("cache miss for: %s", f.Request.URL)
 }
 
@@ -86,7 +86,7 @@ func (c *ResponseCacheAddon) Response(f *px.Flow) {
 	if f.Request != nil && f.Request.Header.Get("X-Cache") == "MISS" {
 		// abusing the request header as a context storage for the cache miss
 		if f.Response != nil {
-			f.Response.Header.Add("X-Cache", "MISS")
+			f.Response.Header.Set("X-Cache", "MISS")
 		}
 	}
 
@@ -101,7 +101,7 @@ func (c *ResponseCacheAddon) Response(f *px.Flow) {
 		// Only cache good response codes
 		_, shouldCache := cacheOnlyResponseCodes[f.Response.StatusCode]
 		if !shouldCache {
-			f.Response.Header.Add("X-Cache", "SKIP")
+			f.Response.Header.Set("X-Cache", "SKIP")
 			log.Debugf("skipping cache storage for non-200 response: %s", f.Request.URL)
 			return
 		}
