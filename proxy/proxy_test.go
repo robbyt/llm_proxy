@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/robbyt/llm_proxy/config"
 	"github.com/stretchr/testify/assert"
@@ -18,10 +22,43 @@ import (
 )
 
 const (
-	testServerListenAddr = "localhost:8182"
+	// ugly hack to wait for background async
+	DefaultSleepTime = 1 * time.Second
 )
 
-func webServer(hitCounter *atomic.Int32) (*http.Server, func()) {
+// randomly finds an available port to bind to
+func getFreePort() (string, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return "", err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return "", err
+	}
+	defer l.Close()
+	port := l.Addr().(*net.TCPAddr).Port
+	return fmt.Sprintf("localhost:%d", port), nil
+}
+
+func httpClient(proxyAddr string) (*http.Client, error) {
+	proxyURL, err := url.Parse(proxyAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	transport := &http.Transport{
+		Proxy: http.ProxyURL(proxyURL),
+	}
+
+	return &http.Client{
+		Transport: transport,
+		Timeout:   10 * http.DefaultClient.Timeout,
+	}, nil
+}
+
+func runWebServer(hitCounter *atomic.Int32, listenAddr string) (*http.Server, func()) {
 	if hitCounter == nil {
 		panic("hitCounter must be non-nil")
 	}
@@ -31,13 +68,12 @@ func webServer(hitCounter *atomic.Int32) (*http.Server, func()) {
 		// increment the counter
 		hitCounter.Add(1)
 		resp := fmt.Sprintf("hits: %d\n", hitCounter.Load())
-
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(resp))
 	})
 
 	srv := &http.Server{
-		Addr:    testServerListenAddr,
+		Addr:    listenAddr,
 		Handler: mux,
 	}
 
@@ -54,79 +90,95 @@ func webServer(hitCounter *atomic.Int32) (*http.Server, func()) {
 	}
 }
 
-func httpClient(proxyAddr string) (*http.Client, error) {
-	proxyURL, err := url.Parse(proxyAddr)
+func runProxy(proxyPort, tempDir string, proxyAppMode config.AppMode) (shutdownFunc func(), err error) {
+	// Create a simple proxy config
+	cfg := config.NewDefaultConfig()
+	cfg.Listen = proxyPort
+	cfg.CertDir = filepath.Join(tempDir, "certs")
+	cfg.AppMode = proxyAppMode
+	cfg.NoHttpUpgrader = true // disable TLS because our test server doesn't support it
+
+	// create a proxy with the test config
+	p, err := configProxy(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	transport := &http.Transport{
-		Proxy: http.ProxyURL(proxyURL),
-	}
-
-	return &http.Client{
-		Transport: transport,
-	}, nil
-}
-
-func TestProxySimple(t *testing.T) {
-
-	// Create a simple proxy config
-	cfg := config.NewDefaultConfig()
-	cfg.CertDir = t.TempDir()
-	cfg.NoHttpUpgrader = true // disable TLS because our test server doesn't support it
-	cfg.AppMode = config.SimpleMode
-
-	// create a proxy with the test config
-	p, err := configProxy(cfg)
-	require.NoError(t, err)
-	require.NotNil(t, p)
-
-	// external control of the proxy
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+	// setup external control of the proxy
+	shutdownChan := make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, os.Interrupt, syscall.SIGTERM)
 
 	// start the proxy in the background
 	go func() {
-		err = startProxy(p, shutdown)
-		require.NoError(t, err)
+		err = startProxy(p, shutdownChan)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}()
+	// sleep while waiting for the proxy to start
+	time.Sleep(DefaultSleepTime)
+
+	return func() {
+		shutdownChan <- os.Interrupt
+	}, nil
+}
+func BenchmarkProxySimple(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+	}
+}
+
+func TestProxySimple(t *testing.T) {
+	// create a proxy with a test config
+	proxyPort, err := getFreePort()
+	require.NoError(t, err)
+	tmpDir := t.TempDir()
+	proxyShutdown, err := runProxy(proxyPort, tmpDir, config.SimpleMode)
+	require.NoError(t, err)
 
 	// Start a basic web server on another port
 	hitCounter := new(atomic.Int32)
-
-	srv, srvShutdown := webServer(hitCounter)
+	testServerPort, err := getFreePort()
+	require.NoError(t, err)
+	srv, srvShutdown := runWebServer(hitCounter, testServerPort)
 	require.NotNil(t, srv)
 	require.NotNil(t, srvShutdown)
 
-	// Create a client that will use the proxy
-	client, err := httpClient("http://" + cfg.Listen)
+	// Create an http client that will use the proxy to connect to the web server
+	client, err := httpClient("http://" + proxyPort)
 	require.NoError(t, err)
 
-	// make a request using that client, through the proxy
-	resp1, err := client.Get("http://" + testServerListenAddr)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp1.StatusCode)
+	t.Run("TestSimpleProxy", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
+		// make a request using that client, through the proxy
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
 
-	// check the response body from req1
-	body1, err := io.ReadAll(resp1.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("hits: 1\n"), body1)
+		// check the response body from req1
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load())
+	})
 
-	// make another request using that client, through the proxy
-	resp2, err := client.Get("http://" + testServerListenAddr)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
+	t.Run("TestSimpleProxy2", func(t *testing.T) {
+		hitCounter.Store(5) // reset the counter
+		// make another request using that client, through the proxy
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
 
-	// check the response body from req2
-	body2, err := io.ReadAll(resp2.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("hits: 2\n"), body2)
+		// check the response body from req2
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 6\n"), body)
+		assert.Equal(t, int32(6), hitCounter.Load())
+	})
 
 	// done with tests, send shutdown signals
 	t.Cleanup(func() {
-		srvShutdown()            // close the simple web server
-		shutdown <- os.Interrupt // close the proxy
+		srvShutdown()
+		proxyShutdown()
 	})
 }
 
