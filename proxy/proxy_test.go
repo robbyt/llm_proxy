@@ -122,9 +122,41 @@ func runProxy(proxyPort, tempDir string, proxyAppMode config.AppMode) (shutdownF
 		shutdownChan <- os.Interrupt
 	}, nil
 }
+
 func BenchmarkProxySimple(b *testing.B) {
+	// create a proxy with a test config
+	proxyPort, err := getFreePort()
+	require.NoError(b, err)
+	tmpDir := b.TempDir()
+	proxyShutdown, err := runProxy(proxyPort, tmpDir, config.SimpleMode)
+	require.NoError(b, err)
+
+	// Start a basic web server on another port
+	hitCounter := new(atomic.Int32)
+	testServerPort, err := getFreePort()
+	require.NoError(b, err)
+	srv, srvShutdown := runWebServer(hitCounter, testServerPort)
+	require.NotNil(b, srv)
+	require.NotNil(b, srvShutdown)
+
+	// Create an http client that will use the proxy to connect to the web server
+	client, err := httpClient("http://" + proxyPort)
+	require.NoError(b, err)
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
+		hitCounter.Store(0) // reset the counter
+		// make a request using that client, through the proxy
+		b.StartTimer()
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		b.StopTimer()
+		require.NoError(b, err)
+		assert.Equal(b, 200, resp.StatusCode)
 	}
+	b.Cleanup(func() {
+		srvShutdown()
+		proxyShutdown()
+	})
 }
 
 func TestProxySimple(t *testing.T) {
