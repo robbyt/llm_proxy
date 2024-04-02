@@ -341,67 +341,77 @@ func TestProxyDirLoggerMode(t *testing.T) {
 }
 
 func TestProxyCache(t *testing.T) {
-	tmpDir := t.TempDir()
-	// Create a simple proxy config
-	cfg := config.NewDefaultConfig()
-	cfg.CertDir = tmpDir + "/certs"
-	cfg.Cache.Dir = tmpDir + "/cache"
-	cfg.NoHttpUpgrader = true // disable TLS because our test server doesn't support it
-	cfg.AppMode = config.CacheMode
-
-	// create a proxy with the test config
-	p, err := configProxy(cfg)
+	// create a proxy with a test config
+	proxyPort, err := getFreePort()
 	require.NoError(t, err)
-	require.NotNil(t, p)
-
-	// external control of the proxy
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
-
-	// start the proxy in the background
-	go func() {
-		err = startProxy(p, shutdown)
-		require.NoError(t, err)
-	}()
+	tmpDir := t.TempDir()
+	proxyShutdown, err := runProxy(proxyPort, tmpDir, config.CacheMode)
+	require.NoError(t, err)
 
 	// Start a basic web server on another port
 	hitCounter := new(atomic.Int32)
-	srv, srvShutdown := webServer(hitCounter)
+	testServerPort, err := getFreePort()
+	require.NoError(t, err)
+	srv, srvShutdown := runWebServer(hitCounter, testServerPort)
 	require.NotNil(t, srv)
 	require.NotNil(t, srvShutdown)
 
 	// Create a client that will use the proxy
-	client, err := httpClient("http://" + cfg.Listen)
+	client, err := httpClient("http://" + proxyPort)
 	require.NoError(t, err)
 
-	// make a request using that client, through the proxy
-	resp1, err := client.Get("http://" + testServerListenAddr)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp1.StatusCode)
+	t.Run("TestCacheMiss", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
+		// make a request using the client, through the proxy
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// check the response body from req1
-	body1, err := io.ReadAll(resp1.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("hits: 1\n"), body1)
-	assert.Equal(t, int32(1), hitCounter.Load())
-	assert.Equal(t, resp1.Header.Get("X-Cache"), "MISS")
+		// check the response body from this request
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load())
+		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
+	})
 
-	// make another request using that client, through the proxy
-	resp2, err := client.Get("http://" + testServerListenAddr)
-	require.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
+	t.Run("TestCacheHit", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
 
-	// check the response body from req2 (should be the cached response with value=1, not the incremented value 2)
-	body2, err := io.ReadAll(resp2.Body)
-	require.NoError(t, err)
-	assert.Equal(t, []byte("hits: 1\n"), body2)
-	assert.Equal(t, int32(1), hitCounter.Load()) // the counter should not have incremented because the server shouldn't have been hit
-	assert.Equal(t, resp2.Header.Get("X-Cache"), "HIT")
+		// make a request using the client, through the proxy
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// check the response body from this request, should be a miss
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load())
+		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
+
+		// wait for the cache to be written
+		time.Sleep(DefaultSleepTime)
+
+		// now, this should be a cache hit...
+		// make another request using the client, through the proxy
+		resp, err = client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+
+		// check the response body from this request
+		// (should be the cached response with value=1, not the incremented value)
+		body, err = io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load()) // the counter should not be 6, because we got a cache hit
+		assert.Equal(t, "HIT", resp.Header.Get("X-Cache"))
+	})
 
 	// done with tests, send shutdown signals
 	t.Cleanup(func() {
-		srvShutdown()            // close the simple web server
-		shutdown <- os.Interrupt // close the proxy
+		srvShutdown()
+		proxyShutdown()
 	})
 }
 
