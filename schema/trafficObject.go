@@ -24,6 +24,88 @@ type TrafficObject struct {
 	headerFilterDone sync.Once   `json:"-"`
 }
 
+// UnmarshalJSON performs a non-threadsafe load of json data into THIS TrafficObject
+func (t *TrafficObject) UnmarshalJSON(data []byte) error {
+	r := make(map[string]any)
+	err := json.Unmarshal(data, &r)
+	if err != nil {
+		return err
+	}
+
+	// handle status code
+	if statusCode, ok := r["statusCode"]; ok {
+		statusFloat, ok := statusCode.(float64)
+		if !ok {
+			return errors.New("statusCode parse error")
+		}
+		t.StatusCode = int(statusFloat)
+	}
+
+	// handle method
+	method, ok := r["method"]
+	if ok {
+		t.Method = method.(string)
+	}
+
+	// handle URL
+	rawURL, ok := r["url"]
+	if ok {
+		strURL, ok := rawURL.(string)
+		if !ok {
+			return errors.New("url parse error")
+		}
+		u, err := url.Parse(strURL)
+		if err != nil {
+			return err
+		}
+		t.URL = u
+	}
+
+	// handle headers
+	rawheader, ok := r["header"].(map[string]any)
+	if ok {
+		header := make(map[string][]string)
+		for k, v := range rawheader {
+			vals, ok := v.([]any)
+			if !ok {
+				return errors.New("header parse error")
+			}
+
+			svals := make([]string, 0)
+			for _, val := range vals {
+				sval, ok := val.(string)
+				if !ok {
+					return errors.New("header parse error")
+				}
+				svals = append(svals, sval)
+			}
+			header[k] = svals
+		}
+		t.Header = header
+	}
+
+	// handle body
+	body, ok := r["body"]
+	if ok {
+		t.Body, ok = body.(string)
+		if !ok {
+			return errors.New("body parse error")
+		}
+	}
+
+	// handle proto
+	proto, ok := r["proto"]
+	if ok {
+		t.Proto, ok = proto.(string)
+		if !ok {
+			return errors.New("proto parse error")
+		}
+	}
+
+	t.filterHeaders()
+	return nil
+}
+
 // ToJSON marshals the TrafficObject into JSON
 func (t *TrafficObject) ToJSON() ([]byte, error) {
 	return json.Marshal(t)
@@ -116,83 +198,10 @@ func NewFromJSONBytes(data []byte, headersToFilter []string) (*TrafficObject, er
 	t := &TrafficObject{
 		headersToFilter: headersToFilter,
 	}
-
-	r := make(map[string]any)
-	err := json.Unmarshal(data, &r)
+	err := json.Unmarshal(data, t)
 	if err != nil {
 		return nil, err
 	}
 
-	// handle status code
-	if statusCode, ok := r["statusCode"]; ok {
-		statusFloat, ok := statusCode.(float64)
-		if !ok {
-			return nil, errors.New("statusCode parse error")
-		}
-		t.StatusCode = int(statusFloat)
-	}
-
-	// handle method
-	method, ok := r["method"]
-	if ok {
-		t.Method = method.(string)
-	}
-
-	// handle URL
-	rawURL, ok := r["url"]
-	if ok {
-		strURL, ok := rawURL.(string)
-		if !ok {
-			return nil, errors.New("url parse error")
-		}
-		u, err := url.Parse(strURL)
-		if err != nil {
-			return nil, err
-		}
-		t.URL = u
-	}
-
-	// handle headers
-	rawheader, ok := r["header"].(map[string]any)
-	if ok {
-		header := make(map[string][]string)
-		for k, v := range rawheader {
-			vals, ok := v.([]any)
-			if !ok {
-				return nil, errors.New("header parse error")
-			}
-
-			svals := make([]string, 0)
-			for _, val := range vals {
-				sval, ok := val.(string)
-				if !ok {
-					return nil, errors.New("header parse error")
-				}
-				svals = append(svals, sval)
-			}
-			header[k] = svals
-		}
-		t.Header = header
-	}
-
-	// handle body
-	body, ok := r["body"]
-	if ok {
-		t.Body, ok = body.(string)
-		if !ok {
-			return nil, errors.New("body parse error")
-		}
-	}
-
-	// handle proto
-	proto, ok := r["proto"]
-	if ok {
-		t.Proto, ok = proto.(string)
-		if !ok {
-			return nil, errors.New("proto parse error")
-		}
-	}
-
-	t.filterHeaders()
 	return t, nil
 }
