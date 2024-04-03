@@ -324,12 +324,12 @@ func TestProxyDirLoggerMode(t *testing.T) {
 		assert.NotNil(t, lDump.Timestamp)
 		assert.NotNil(t, lDump.ConnectionStats)
 
-		require.NotNil(t, lDump.Request)
-		assert.Equal(t, "POST", lDump.ConnectionStats.Method)
+		assert.NotNil(t, lDump.Request)
+		assert.Equal(t, "POST", lDump.Request.Method)
 
-		require.NotNil(t, lDump.Response)
-		assert.Equal(t, http.StatusOK, lDump.ConnectionStats.ResponseCode)
-		assert.Equal(t, "hits: 1\n", lDump.Response.Body)
+		assert.NotNil(t, lDump.Response)
+		assert.Equal(t, "200 OK", lDump.Response.StatusCode)
+		assert.Equal(t, "hits: 2\n", lDump.Response.Body)
 
 	})
 
@@ -391,7 +391,7 @@ func TestProxyCache(t *testing.T) {
 		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
 
 		// wait for the cache to be written
-		time.Sleep(DefaultSleepTime)
+		time.Sleep(defaultSleepTime)
 
 		// now, this should be a cache hit...
 		// make another request using the client, through the proxy
