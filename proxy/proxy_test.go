@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -17,13 +18,16 @@ import (
 	"time"
 
 	"github.com/robbyt/llm_proxy/config"
+	"github.com/robbyt/llm_proxy/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const (
 	// ugly hack to wait for background async
-	DefaultSleepTime = 1 * time.Second
+	defaultSleepTime = 1 * time.Second
+	outputSubdir     = "output"
+	certSubdir       = "certs"
 )
 
 // randomly finds an available port to bind to
@@ -94,7 +98,9 @@ func runProxy(proxyPort, tempDir string, proxyAppMode config.AppMode) (shutdownF
 	// Create a simple proxy config
 	cfg := config.NewDefaultConfig()
 	cfg.Listen = proxyPort
-	cfg.CertDir = filepath.Join(tempDir, "certs")
+	cfg.CertDir = filepath.Join(tempDir, certSubdir)
+	cfg.OutputDir = filepath.Join(tempDir, outputSubdir)
+	cfg.Debug = true
 	cfg.AppMode = proxyAppMode
 	cfg.NoHttpUpgrader = true // disable TLS because our test server doesn't support it
 
@@ -116,9 +122,10 @@ func runProxy(proxyPort, tempDir string, proxyAppMode config.AppMode) (shutdownF
 		}
 	}()
 	// sleep while waiting for the proxy to start
-	time.Sleep(DefaultSleepTime)
+	time.Sleep(defaultSleepTime)
 
 	return func() {
+		// returns a function that can be called to shutdown the proxy goroutine
 		shutdownChan <- os.Interrupt
 	}, nil
 }
@@ -205,6 +212,97 @@ func TestProxySimple(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []byte("hits: 6\n"), body)
 		assert.Equal(t, int32(6), hitCounter.Load())
+	})
+
+	// done with tests, send shutdown signals
+	t.Cleanup(func() {
+		srvShutdown()
+		proxyShutdown()
+	})
+}
+
+func TestProxyDirLoggerMode(t *testing.T) {
+	// create a proxy with a test config
+	proxyPort, err := getFreePort()
+	require.NoError(t, err)
+	tmpDir := t.TempDir()
+	proxyShutdown, err := runProxy(proxyPort, tmpDir, config.DirLoggerMode)
+	require.NoError(t, err)
+
+	// Start a basic web server on another port
+	hitCounter := new(atomic.Int32)
+	testServerPort, err := getFreePort()
+	require.NoError(t, err)
+	srv, srvShutdown := runWebServer(hitCounter, testServerPort)
+	require.NotNil(t, srv)
+	require.NotNil(t, srvShutdown)
+
+	// Create an http client that will use the proxy to connect to the web server
+	client, err := httpClient("http://" + proxyPort)
+	require.NoError(t, err)
+
+	t.Run("TestDirLoggerNormal", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
+		// make a request using that client, through the proxy
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, int32(1), hitCounter.Load())
+
+		// check the response body from req1
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+
+		// sleep to allow the proxy to write the log file
+		time.Sleep(defaultSleepTime)
+
+		// check that the log file was created
+		logFiles, err := filepath.Glob(filepath.Join(tmpDir, outputSubdir, "*"))
+		require.NoError(t, err)
+		require.Equal(t, 1, len(logFiles))
+
+		// read the log file, and check that it contains the expected content
+		logFile, err := os.ReadFile(logFiles[0])
+		require.NoError(t, err)
+		assert.Contains(t, string(logFile), `hits: 1`)
+
+		// delete that log file, and try again
+		err = os.Remove(logFiles[0])
+		require.NoError(t, err)
+
+		// make another request using that client, through the proxy
+		resp, err = client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, int32(2), hitCounter.Load())
+
+		// sleep to allow the proxy to write the log file
+		time.Sleep(defaultSleepTime)
+
+		// check the log
+		logFiles, err = filepath.Glob(filepath.Join(tmpDir, outputSubdir, "*"))
+		require.NoError(t, err)
+		require.Equal(t, 1, len(logFiles))
+
+		// read the log file, and check that it contains the expected content
+		logFile, err = os.ReadFile(logFiles[0])
+		require.NoError(t, err)
+		assert.Contains(t, string(logFile), `hits: 2`)
+
+		// marshal the log file to a logDumpContainer
+		lDump := schema.LogDumpContainer{}
+		err = json.Unmarshal(logFile, &lDump)
+		require.NoError(t, err)
+
+		// check the logDumpContainer
+		assert.Equal(t, schema.SchemaVersion, lDump.SchemaVersion)
+		assert.NotNil(t, lDump.Timestamp)
+		assert.NotNil(t, lDump.ConnectionStats)
+		assert.NotNil(t, lDump.Request)
+		assert.NotNil(t, lDump.Response)
+		assert.Equal(t, "hits: 2\n", lDump.Response.Body)
+
 	})
 
 	// done with tests, send shutdown signals
