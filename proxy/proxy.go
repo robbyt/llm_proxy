@@ -131,9 +131,9 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 		logSources := config.LogSourceConfig{
 			LogConnectionStats: !cfg.NoLogConnStats,
 			LogRequestHeaders:  !cfg.NoLogReqHeaders,
-			LogRequestBody:     !cfg.NoLogReqBody,
+			LogRequest:         !cfg.NoLogReqBody,
 			LogResponseHeaders: !cfg.NoLogRespHeaders,
-			LogResponseBody:    !cfg.NoLogRespBody,
+			LogResponse:        !cfg.NoLogRespBody,
 		}
 
 		// append the WriteToDir LogDestination to the logDest slice, so megadumper will write to disk
