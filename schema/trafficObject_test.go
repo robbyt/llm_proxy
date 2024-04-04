@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"testing"
@@ -133,7 +134,7 @@ func TestTrafficObject_MarshalJSON(t *testing.T) {
 			},
 		}
 
-		jsonBytes, err := trafficObject.ToJSON()
+		jsonBytes, err := json.Marshal(trafficObject)
 		require.NoError(t, err)
 		assert.NotEmpty(t, jsonBytes)
 
