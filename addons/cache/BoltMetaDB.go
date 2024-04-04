@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -74,7 +75,7 @@ func (c *BoltMetaDB) Put(request *schema.TrafficObject, response *schema.Traffic
 	reqBody := []byte(request.Body)
 
 	// Store the encoded data in the targetDB
-	respJSON, err := response.ToJSON()
+	respJSON, err := json.Marshal(response)
 	if err != nil {
 		return fmt.Errorf("error marshalling response object: %s", err)
 	}
