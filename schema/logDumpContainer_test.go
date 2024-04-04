@@ -37,14 +37,10 @@ func getDefaultFlow() px.Flow {
 
 func getDefaultConnectionStats() *ConnectionStatsContainer {
 	return &ConnectionStatsContainer{
-		ClientAddress:       "unknown",
-		Method:              "",
-		URL:                 "http://example.com/",
-		ResponseCode:        0,
-		ContentLength:       21,
-		Duration:            0,
-		ResponseContentType: "[application/json]",
-		ProxyID:             "00000000-0000-0000-0000-000000000000",
+		ClientAddress: "unknown",
+		URL:           "http://example.com/",
+		Duration:      0,
+		ProxyID:       "00000000-0000-0000-0000-000000000000",
 	}
 }
 
@@ -67,9 +63,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			logSources: config.LogSourceConfig{
 				LogConnectionStats: true,
 				LogRequestHeaders:  true,
-				LogRequestBody:     true,
+				LogRequest:         true,
 				LogResponseHeaders: true,
-				LogResponseBody:    true,
+				LogResponse:        true,
 			},
 			filterReqHeaders:        []string{},
 			filterRespHeaders:       []string{},
@@ -85,9 +81,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			logSources: config.LogSourceConfig{
 				LogConnectionStats: false,
 				LogRequestHeaders:  false,
-				LogRequestBody:     false,
+				LogRequest:         false,
 				LogResponseHeaders: false,
-				LogResponseBody:    false,
+				LogResponse:        false,
 			},
 			filterReqHeaders:        []string{},
 			filterRespHeaders:       []string{},
@@ -103,9 +99,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			logSources: config.LogSourceConfig{
 				LogConnectionStats: true,
 				LogRequestHeaders:  true,
-				LogRequestBody:     true,
+				LogRequest:         true,
 				LogResponseHeaders: true,
-				LogResponseBody:    true,
+				LogResponse:        true,
 			},
 			filterReqHeaders:        []string{"Delete-Me-Request"},
 			filterRespHeaders:       []string{"Delete-Me-Response"},
@@ -121,9 +117,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			logSources: config.LogSourceConfig{
 				LogConnectionStats: true,
 				LogRequestHeaders:  false,
-				LogRequestBody:     true,
+				LogRequest:         true,
 				LogResponseHeaders: true,
-				LogResponseBody:    true,
+				LogResponse:        true,
 			},
 			filterReqHeaders:        []string{"Delete-Me-Request"},
 			filterRespHeaders:       []string{"Delete-Me-Response"},
@@ -139,9 +135,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			logSources: config.LogSourceConfig{
 				LogConnectionStats: true,
 				LogRequestHeaders:  true,
-				LogRequestBody:     false,
+				LogRequest:         false,
 				LogResponseHeaders: true,
-				LogResponseBody:    true,
+				LogResponse:        true,
 			},
 			filterReqHeaders:        []string{"Delete-Me-Request"},
 			filterRespHeaders:       []string{"Delete-Me-Response"},
@@ -157,9 +153,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			logSources: config.LogSourceConfig{
 				LogConnectionStats: true,
 				LogRequestHeaders:  true,
-				LogRequestBody:     true,
+				LogRequest:         true,
 				LogResponseHeaders: false,
-				LogResponseBody:    true,
+				LogResponse:        true,
 			},
 			filterReqHeaders:        []string{"Delete-Me-Request"},
 			filterRespHeaders:       []string{"Delete-Me-Response"},
@@ -175,9 +171,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			logSources: config.LogSourceConfig{
 				LogConnectionStats: true,
 				LogRequestHeaders:  true,
-				LogRequestBody:     true,
+				LogRequest:         true,
 				LogResponseHeaders: true,
-				LogResponseBody:    false,
+				LogResponse:        false,
 			},
 			filterReqHeaders:        []string{"Delete-Me-Request"},
 			filterRespHeaders:       []string{"Delete-Me-Response"},
@@ -206,38 +202,38 @@ func TestValidateFlowObj(t *testing.T) {
 	t.Run("flow is nil", func(t *testing.T) {
 		logSources := config.LogSourceConfig{
 			LogRequestHeaders:  true,
-			LogRequestBody:     true,
+			LogRequest:         true,
 			LogResponseHeaders: true,
-			LogResponseBody:    true,
+			LogResponse:        true,
 		}
 		// validateFlowObj(nil, &logSources)
 		ls := validateFlowObj(nil, logSources)
 		assert.False(t, ls.LogRequestHeaders)
-		assert.False(t, ls.LogRequestBody)
+		assert.False(t, ls.LogRequest)
 		assert.False(t, ls.LogResponseHeaders)
-		assert.False(t, ls.LogResponseBody)
+		assert.False(t, ls.LogResponse)
 	})
 
 	t.Run("request is nil", func(t *testing.T) {
 		logSources := config.LogSourceConfig{
 			LogRequestHeaders: true,
-			LogRequestBody:    true,
+			LogRequest:        true,
 		}
 		flow := &px.Flow{}
 		ls := validateFlowObj(flow, logSources)
 		assert.False(t, ls.LogRequestHeaders)
-		assert.False(t, ls.LogRequestBody)
+		assert.False(t, ls.LogRequest)
 	})
 
 	t.Run("response is nil", func(t *testing.T) {
 		logSources := config.LogSourceConfig{
 			LogResponseHeaders: true,
-			LogResponseBody:    true,
+			LogResponse:        true,
 		}
 		flow := &px.Flow{}
 		ls := validateFlowObj(flow, logSources)
 		assert.False(t, ls.LogResponseHeaders)
-		assert.False(t, ls.LogResponseBody)
+		assert.False(t, ls.LogResponse)
 	})
 
 }

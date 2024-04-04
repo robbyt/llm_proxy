@@ -11,9 +11,9 @@ import (
 type LogSourceConfig struct {
 	LogConnectionStats bool
 	LogRequestHeaders  bool
-	LogRequestBody     bool
+	LogRequest         bool
 	LogResponseHeaders bool
-	LogResponseBody    bool
+	LogResponse        bool
 }
 
 func (l *LogSourceConfig) String() string {
@@ -28,7 +28,7 @@ func (l *LogSourceConfig) String() string {
 var LogSourceConfigAllTrue = LogSourceConfig{
 	LogConnectionStats: true,
 	LogRequestHeaders:  true,
-	LogRequestBody:     true,
+	LogRequest:         true,
 	LogResponseHeaders: true,
-	LogResponseBody:    true,
+	LogResponse:        true,
 }

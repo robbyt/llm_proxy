@@ -72,26 +72,26 @@ func validateFlowObj(f *px.Flow, logSources config.LogSourceConfig) config.LogSo
 	if f.Request == nil {
 		log.Error("request is nil, disabling request data extraction")
 		logSources.LogRequestHeaders = false
-		logSources.LogRequestBody = false
+		logSources.LogRequest = false
 	} else if f.Request.Header == nil {
 		log.Error("request headers are nil, disabling request headers extraction")
 		logSources.LogRequestHeaders = false
 	} else if f.Request.Body == nil {
 		log.Error("request body is nil, disabling request body extraction")
-		logSources.LogRequestBody = false
+		logSources.LogRequest = false
 	}
 
 	// response validation
 	if f.Response == nil {
 		log.Error("response is nil, disabling response data extraction")
 		logSources.LogResponseHeaders = false
-		logSources.LogResponseBody = false
+		logSources.LogResponse = false
 	} else if f.Response.Header == nil {
 		log.Error("response headers are nil, disabling response headers extraction")
 		logSources.LogResponseHeaders = false
 	} else if f.Response.Body == nil {
 		log.Error("response body is nil, disabling response body extraction")
-		logSources.LogResponseBody = false
+		logSources.LogResponse = false
 	}
 	return logSources
 }
@@ -121,7 +121,7 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 		}
 	}
 
-	if logSources.LogRequestBody {
+	if logSources.LogRequest {
 		log.Debug("Dumping request body")
 		err := dumpContainer.loadRequestBody()
 		if err != nil {
@@ -137,7 +137,7 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 		}
 	}
 
-	if logSources.LogResponseBody {
+	if logSources.LogResponse {
 		log.Debug("Dumping response body")
 		err := dumpContainer.loadResponseBody()
 		if err != nil {
