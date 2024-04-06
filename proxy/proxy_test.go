@@ -246,8 +246,8 @@ func TestProxyDirLoggerMode(t *testing.T) {
 		// make a request using that client, through the proxy
 		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
 		require.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
-		assert.Equal(t, int32(1), hitCounter.Load())
+		require.Equal(t, 200, resp.StatusCode)
+		require.Equal(t, int32(1), hitCounter.Load())
 
 		// check the response body from req1
 		body, err := io.ReadAll(resp.Body)
@@ -274,8 +274,8 @@ func TestProxyDirLoggerMode(t *testing.T) {
 		// make another request using that client, through the proxy
 		resp, err = client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
 		require.NoError(t, err)
-		assert.Equal(t, 200, resp.StatusCode)
-		assert.Equal(t, int32(2), hitCounter.Load())
+		require.Equal(t, 200, resp.StatusCode)
+		require.Equal(t, int32(2), hitCounter.Load())
 
 		// sleep to allow the proxy to write the log file
 		time.Sleep(defaultSleepTime)
@@ -287,21 +287,49 @@ func TestProxyDirLoggerMode(t *testing.T) {
 
 		// read the log file, and check that it contains the expected content
 		logFile, err = os.ReadFile(logFiles[0])
+		defer os.Remove(logFiles[0])
 		require.NoError(t, err)
 		assert.Contains(t, string(logFile), `hits: 2`)
+	})
+
+	t.Run("TestDirLoggerJSON", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
+
+		// make another request using that client, through the proxy
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		require.Equal(t, 200, resp.StatusCode)
+		require.Equal(t, int32(1), hitCounter.Load())
+
+		// sleep to allow the proxy to write the log file
+		time.Sleep(defaultSleepTime)
+
+		// check the log
+		logFiles, err := filepath.Glob(filepath.Join(tmpDir, outputSubdir, "*"))
+		require.NoError(t, err)
+		require.Equal(t, 1, len(logFiles))
+
+		// read the log file, and check that it contains the expected content
+		logFile, err := os.ReadFile(logFiles[0])
+		require.NoError(t, err)
 
 		// marshal the log file to a logDumpContainer
 		lDump := schema.LogDumpContainer{}
 		err = json.Unmarshal(logFile, &lDump)
 		require.NoError(t, err)
+		fmt.Println(string(logFile))
 
 		// check the logDumpContainer
 		assert.Equal(t, schema.SchemaVersion, lDump.SchemaVersion)
 		assert.NotNil(t, lDump.Timestamp)
 		assert.NotNil(t, lDump.ConnectionStats)
-		assert.NotNil(t, lDump.Request)
-		assert.NotNil(t, lDump.Response)
-		assert.Equal(t, "hits: 2\n", lDump.Response.Body)
+
+		require.NotNil(t, lDump.Request)
+		assert.Equal(t, "POST", lDump.ConnectionStats.Method)
+
+		require.NotNil(t, lDump.Response)
+		assert.Equal(t, http.StatusOK, lDump.ConnectionStats.ResponseCode)
+		assert.Equal(t, "hits: 1\n", lDump.Response.Body)
 
 	})
 
