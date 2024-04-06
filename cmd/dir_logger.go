@@ -45,7 +45,7 @@ func init() {
 	)
 	dirLoggerCmd.Flags().BoolVarP(
 		&cfg.NoLogReqBody, "no-log-req-body", "", cfg.NoLogReqBody,
-		"Don't log request body",
+		"Don't log request body or details",
 	)
 	dirLoggerCmd.Flags().BoolVarP(
 		&cfg.NoLogRespHeaders, "no-log-resp-headers", "", cfg.NoLogRespHeaders,
@@ -53,7 +53,7 @@ func init() {
 	)
 	dirLoggerCmd.Flags().BoolVarP(
 		&cfg.NoLogRespBody, "no-log-resp-body", "", cfg.NoLogRespBody,
-		"Don't log response body",
+		"Don't log response body or details",
 	)
 	dirLoggerCmd.Flags().StringSliceVarP(
 		&cfg.FilterReqHeaders, "filter-req-headers", "", cfg.FilterReqHeaders,

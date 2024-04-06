@@ -28,6 +28,8 @@ const (
 	defaultSleepTime = 1 * time.Second
 	outputSubdir     = "output"
 	certSubdir       = "certs"
+	cacheSubdir      = "cache"
+	debugOutput      = true
 )
 
 // randomly finds an available port to bind to
@@ -100,7 +102,8 @@ func runProxy(proxyPort, tempDir string, proxyAppMode config.AppMode) (shutdownF
 	cfg.Listen = proxyPort
 	cfg.CertDir = filepath.Join(tempDir, certSubdir)
 	cfg.OutputDir = filepath.Join(tempDir, outputSubdir)
-	cfg.Debug = true
+	cfg.Cache.Dir = filepath.Join(tempDir, cacheSubdir)
+	cfg.Debug = debugOutput
 	cfg.AppMode = proxyAppMode
 	cfg.NoHttpUpgrader = true // disable TLS because our test server doesn't support it
 
@@ -325,12 +328,87 @@ func TestProxyDirLoggerMode(t *testing.T) {
 		assert.NotNil(t, lDump.ConnectionStats)
 
 		require.NotNil(t, lDump.Request)
-		assert.Equal(t, "POST", lDump.ConnectionStats.Method)
+		assert.Equal(t, "POST", lDump.Request.Method)
 
 		require.NotNil(t, lDump.Response)
-		assert.Equal(t, http.StatusOK, lDump.ConnectionStats.ResponseCode)
+		assert.Equal(t, http.StatusOK, lDump.Response.StatusCode)
 		assert.Equal(t, "hits: 1\n", lDump.Response.Body)
 
+	})
+
+	// done with tests, send shutdown signals
+	t.Cleanup(func() {
+		srvShutdown()
+		proxyShutdown()
+	})
+}
+
+func TestProxyCache(t *testing.T) {
+	// create a proxy with a test config
+	proxyPort, err := getFreePort()
+	require.NoError(t, err)
+	tmpDir := t.TempDir()
+	proxyShutdown, err := runProxy(proxyPort, tmpDir, config.CacheMode)
+	require.NoError(t, err)
+
+	// Start a basic web server on another port
+	hitCounter := new(atomic.Int32)
+	testServerPort, err := getFreePort()
+	require.NoError(t, err)
+	srv, srvShutdown := runWebServer(hitCounter, testServerPort)
+	require.NotNil(t, srv)
+	require.NotNil(t, srvShutdown)
+
+	// Create a client that will use the proxy
+	client, err := httpClient("http://" + proxyPort)
+	require.NoError(t, err)
+
+	t.Run("TestCacheMiss", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
+		// make a request using the client, through the proxy
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// check the response body from this request
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load())
+		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
+	})
+
+	t.Run("TestCacheHit", func(t *testing.T) {
+		hitCounter.Store(0) // reset the counter
+
+		// make a request using the client, through the proxy
+		resp, err := client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// check the response body from this request, should be a miss
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load())
+		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
+
+		// wait for the cache to be written
+		time.Sleep(defaultSleepTime)
+
+		// now, this should be a cache hit...
+		// make another request using the client, through the proxy
+		resp, err = client.Post("http://"+testServerPort, "text/plain", strings.NewReader("hello"))
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+
+		// check the response body from this request
+		// (should be the cached response with value=1, not the incremented value)
+		body, err = io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("hits: 1\n"), body)
+		assert.Equal(t, int32(1), hitCounter.Load()) // the counter should not be 6, because we got a cache hit
+		assert.Equal(t, "HIT", resp.Header.Get("X-Cache"))
 	})
 
 	// done with tests, send shutdown signals

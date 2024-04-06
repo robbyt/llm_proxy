@@ -1,9 +1,8 @@
 package schema
 
 import (
-	"bytes"
 	"fmt"
-	"net/http"
+	"net/url"
 	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -13,29 +12,7 @@ import (
 	"github.com/robbyt/llm_proxy/schema/utils"
 )
 
-const SchemaVersion string = "v1"
-
-type TrafficObject struct {
-	Headers         http.Header `json:"headers"`
-	Body            string      `json:"body"`
-	headersToFilter []string    `json:"-"`
-}
-
-// HeadersString returns the headers as a flat string
-func (t *TrafficObject) HeadersString() string {
-	buf := new(bytes.Buffer)
-	if err := t.Headers.WriteSubset(buf, nil); err != nil {
-		return ""
-	}
-	return buf.String()
-}
-
-func (t *TrafficObject) filterHeaders() {
-	log.Debugf("Filtering headers from log output: %v", t.headersToFilter)
-	for _, header := range t.headersToFilter {
-		t.Headers.Del(header)
-	}
-}
+const SchemaVersion string = "v2"
 
 // LogDumpContainer holds the request and response data for a given flow
 type LogDumpContainer struct {
@@ -47,20 +24,58 @@ type LogDumpContainer struct {
 	flow            *px.Flow                  `json:"-"`
 }
 
+func (d *LogDumpContainer) loadRequestMethod() error {
+	if d.flow.Request == nil {
+		return fmt.Errorf("request is nil, unable to extract request method")
+	}
+	d.Request.Method = d.flow.Request.Method
+	return nil
+}
+
+func (d *LogDumpContainer) loadRequestURL() error {
+	if d.flow.Request == nil || d.flow.Request.URL == nil {
+		return fmt.Errorf("request URL is nil, unable to extract request URL")
+	}
+	d.Request.URL = d.flow.Request.URL
+	return nil
+}
+
+func (d *LogDumpContainer) loadRequestProto() error {
+	if d.flow.Request == nil {
+		return fmt.Errorf("request is nil, unable to extract request proto")
+	}
+	d.Request.Proto = d.flow.Request.Proto
+	return nil
+}
+
 func (d *LogDumpContainer) loadRequestHeaders() {
-	d.Request.Headers = d.flow.Request.Header
+	d.Request.Header = d.flow.Request.Header
 }
 
 func (d *LogDumpContainer) loadRequestBody() error {
 	// TODO CanPrint converts to a string, so there's no point in doing it twice
-	if utils.CanPrint(d.flow.Request.Body) {
-		d.Request.Body = string(d.flow.Request.Body)
+	bodyStr, canPrint := utils.CanPrintFast(d.flow.Request.Body)
+	if !canPrint {
+		return fmt.Errorf("request body is not printable: %s", d.flow.Request.URL)
 	}
+	d.Request.Body = bodyStr
 	return nil
 }
 
-func (d *LogDumpContainer) loadResponseHeaders() {
-	d.Response.Headers = d.flow.Response.Header
+func (d *LogDumpContainer) loadResponseStatusCode() error {
+	if d.flow.Response == nil {
+		return fmt.Errorf("response is nil, unable to extract response status code")
+	}
+	d.Response.StatusCode = d.flow.Response.StatusCode
+	return nil
+}
+
+func (d *LogDumpContainer) loadResponseHeaders() error {
+	if d.flow.Response.Header == nil {
+		return fmt.Errorf("response headers are nil, unable to extract response headers")
+	}
+	d.Response.Header = d.flow.Response.Header
+	return nil
 }
 
 func (d *LogDumpContainer) loadResponseBody() error {
@@ -94,26 +109,26 @@ func validateFlowObj(f *px.Flow, logSources config.LogSourceConfig) config.LogSo
 	if f.Request == nil {
 		log.Error("request is nil, disabling request data extraction")
 		logSources.LogRequestHeaders = false
-		logSources.LogRequestBody = false
+		logSources.LogRequest = false
 	} else if f.Request.Header == nil {
 		log.Error("request headers are nil, disabling request headers extraction")
 		logSources.LogRequestHeaders = false
 	} else if f.Request.Body == nil {
 		log.Error("request body is nil, disabling request body extraction")
-		logSources.LogRequestBody = false
+		logSources.LogRequest = false
 	}
 
 	// response validation
 	if f.Response == nil {
 		log.Error("response is nil, disabling response data extraction")
 		logSources.LogResponseHeaders = false
-		logSources.LogResponseBody = false
+		logSources.LogResponse = false
 	} else if f.Response.Header == nil {
 		log.Error("response headers are nil, disabling response headers extraction")
 		logSources.LogResponseHeaders = false
 	} else if f.Response.Body == nil {
 		log.Error("response body is nil, disabling response body extraction")
-		logSources.LogResponseBody = false
+		logSources.LogResponse = false
 	}
 	return logSources
 }
@@ -125,8 +140,12 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 		SchemaVersion: SchemaVersion,
 		Timestamp:     time.Now(),
 		flow:          &f,
-		Request:       &TrafficObject{headersToFilter: filterReqHeaders},
-		Response:      &TrafficObject{headersToFilter: filterRespHeaders},
+		Request: &TrafficObject{
+			headersToFilter: filterReqHeaders,
+		},
+		Response: &TrafficObject{
+			headersToFilter: filterRespHeaders,
+		},
 	}
 	errors := make([]error, 0)
 
@@ -143,25 +162,44 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 		}
 	}
 
-	if logSources.LogRequestBody {
+	if logSources.LogRequest {
 		log.Debug("Dumping request body")
-		err := dumpContainer.loadRequestBody()
-		if err != nil {
+		if err := dumpContainer.loadRequestMethod(); err != nil {
 			errors = append(errors, err)
 		}
+		if err := dumpContainer.loadRequestURL(); err != nil {
+			errors = append(errors, err)
+		}
+		if err := dumpContainer.loadRequestProto(); err != nil {
+			errors = append(errors, err)
+		}
+		if err := dumpContainer.loadRequestBody(); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		// NPE defense
+		dumpContainer.Request.URL = &url.URL{}
 	}
 
 	if logSources.LogResponseHeaders {
 		log.Debug("Dumping response headers")
 		if dumpContainer.flow.Response != nil && dumpContainer.flow.Response.Header != nil {
-			dumpContainer.loadResponseHeaders()
-			dumpContainer.Response.filterHeaders()
+			err := dumpContainer.loadResponseHeaders()
+			if err != nil {
+				errors = append(errors, err)
+			} else {
+				dumpContainer.Response.filterHeaders()
+			}
 		}
 	}
 
-	if logSources.LogResponseBody {
+	if logSources.LogResponse {
 		log.Debug("Dumping response body")
 		err := dumpContainer.loadResponseBody()
+		if err != nil {
+			errors = append(errors, err)
+		}
+		err = dumpContainer.loadResponseStatusCode()
 		if err != nil {
 			errors = append(errors, err)
 		}

@@ -6,6 +6,7 @@ type Config struct {
 	*httpBehavior
 	*terminalLogger
 	*trafficLogger
+	Cache *cacheBehavior
 }
 
 func (cfg *Config) getTerminalLogger() *terminalLogger {
@@ -45,6 +46,10 @@ func NewDefaultConfig() *Config {
 			WriteJsonFormatLogs: true,
 			FilterReqHeaders:    append([]string{}, defaultFilterHeaders...), // append empty to deep copy the source slice
 			FilterRespHeaders:   append([]string{}, defaultFilterHeaders...),
+		},
+		Cache: &cacheBehavior{
+			Dir: "/tmp/llm_proxy",
+			TTL: 0,
 		},
 	}
 }

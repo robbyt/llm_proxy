@@ -10,11 +10,11 @@ func TestLogSourceConfig_String(t *testing.T) {
 	config := LogSourceConfig{
 		LogConnectionStats: true,
 		LogRequestHeaders:  true,
-		LogRequestBody:     true,
+		LogRequest:         true,
 		LogResponseHeaders: true,
-		LogResponseBody:    true,
+		LogResponse:        true,
 	}
 
-	expected := `{"LogConnectionStats":true,"LogRequestHeaders":true,"LogRequestBody":true,"LogResponseHeaders":true,"LogResponseBody":true}`
+	expected := `{"LogConnectionStats":true,"LogRequestHeaders":true,"LogRequest":true,"LogResponseHeaders":true,"LogResponse":true}`
 	assert.Equal(t, expected, config.String())
 }

@@ -12,12 +12,12 @@ import (
 func TestJSONFormatter(t *testing.T) {
 	container := &schema.LogDumpContainer{
 		Request: &schema.TrafficObject{
-			Headers: http.Header{"ReqHeader": []string{"ReqValue"}},
-			Body:    "Request Body",
+			Header: http.Header{"ReqHeader": []string{"ReqValue"}},
+			Body:   "Request Body",
 		},
 		Response: &schema.TrafficObject{
-			Headers: http.Header{"RespHeader": []string{"RespValue"}},
-			Body:    "Response Body",
+			Header: http.Header{"RespHeader": []string{"RespValue"}},
+			Body:   "Response Body",
 		},
 	}
 	j := &JSON{}
@@ -26,11 +26,11 @@ func TestJSONFormatter(t *testing.T) {
 	  "timestamp": "0001-01-01T00:00:00Z",
 	  "request": {
 		"body": "Request Body",
-		"headers": { "ReqHeader": [ "ReqValue" ] }
+		"header": { "ReqHeader": [ "ReqValue" ] }
 	  },
 	  "response": {
 		"body": "Response Body",
-		"headers": { "RespHeader": [ "RespValue" ] }
+		"header": { "RespHeader": [ "RespValue" ] }
 	  }
 	}`
 
@@ -71,11 +71,11 @@ func TestJSONFormatter_Empty(t *testing.T) {
 		"timestamp": "0001-01-01T00:00:00Z",
 		"request": {
 			"body": "",
-			"headers": null
+			"header": null
 		},
 		"response": {
 			"body": "",
-			"headers": null
+			"header": null
 		}
 	  }`
 
