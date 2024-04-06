@@ -28,6 +28,8 @@ const (
 	defaultSleepTime = 1 * time.Second
 	outputSubdir     = "output"
 	certSubdir       = "certs"
+	cacheSubdir      = "cache"
+	debugOutput      = true
 )
 
 // randomly finds an available port to bind to
@@ -100,7 +102,8 @@ func runProxy(proxyPort, tempDir string, proxyAppMode config.AppMode) (shutdownF
 	cfg.Listen = proxyPort
 	cfg.CertDir = filepath.Join(tempDir, certSubdir)
 	cfg.OutputDir = filepath.Join(tempDir, outputSubdir)
-	cfg.Debug = true
+	cfg.Cache.Dir = filepath.Join(tempDir, cacheSubdir)
+	cfg.Debug = debugOutput
 	cfg.AppMode = proxyAppMode
 	cfg.NoHttpUpgrader = true // disable TLS because our test server doesn't support it
 
@@ -324,12 +327,12 @@ func TestProxyDirLoggerMode(t *testing.T) {
 		assert.NotNil(t, lDump.Timestamp)
 		assert.NotNil(t, lDump.ConnectionStats)
 
-		assert.NotNil(t, lDump.Request)
+		require.NotNil(t, lDump.Request)
 		assert.Equal(t, "POST", lDump.Request.Method)
 
-		assert.NotNil(t, lDump.Response)
-		assert.Equal(t, "200 OK", lDump.Response.StatusCode)
-		assert.Equal(t, "hits: 2\n", lDump.Response.Body)
+		require.NotNil(t, lDump.Response)
+		assert.Equal(t, http.StatusOK, lDump.Response.StatusCode)
+		assert.Equal(t, "hits: 1\n", lDump.Response.Body)
 
 	})
 
