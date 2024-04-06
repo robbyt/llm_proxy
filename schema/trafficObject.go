@@ -106,9 +106,21 @@ func (t *TrafficObject) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ToJSON marshals the TrafficObject into JSON
-func (t *TrafficObject) ToJSON() ([]byte, error) {
-	return json.Marshal(t)
+// MarshalJSON dumps this TrafficObject into a byte array containing JSON
+func (t *TrafficObject) MarshalJSON() ([]byte, error) {
+	var urlString string
+	if t.URL != nil {
+		urlString = t.URL.String()
+	}
+
+	type Alias TrafficObject
+	return json.Marshal(&struct {
+		URL string `json:"url,omitempty"`
+		*Alias
+	}{
+		URL:   urlString,
+		Alias: (*Alias)(t),
+	})
 }
 
 func (t *TrafficObject) ToProxyResponse() *px.Response {

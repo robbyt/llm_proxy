@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	px "github.com/kardianos/mitmproxy/proxy"
@@ -23,6 +24,30 @@ type LogDumpContainer struct {
 	flow            *px.Flow                  `json:"-"`
 }
 
+func (d *LogDumpContainer) loadRequestMethod() error {
+	if d.flow.Request == nil {
+		return fmt.Errorf("request is nil, unable to extract request method")
+	}
+	d.Request.Method = d.flow.Request.Method
+	return nil
+}
+
+func (d *LogDumpContainer) loadRequestURL() error {
+	if d.flow.Request == nil || d.flow.Request.URL == nil {
+		return fmt.Errorf("request URL is nil, unable to extract request URL")
+	}
+	d.Request.URL = d.flow.Request.URL
+	return nil
+}
+
+func (d *LogDumpContainer) loadRequestProto() error {
+	if d.flow.Request == nil {
+		return fmt.Errorf("request is nil, unable to extract request proto")
+	}
+	d.Request.Proto = d.flow.Request.Proto
+	return nil
+}
+
 func (d *LogDumpContainer) loadRequestHeaders() {
 	d.Request.Header = d.flow.Request.Header
 }
@@ -37,8 +62,20 @@ func (d *LogDumpContainer) loadRequestBody() error {
 	return nil
 }
 
-func (d *LogDumpContainer) loadResponseHeaders() {
+func (d *LogDumpContainer) loadResponseStatusCode() error {
+	if d.flow.Response == nil {
+		return fmt.Errorf("response is nil, unable to extract response status code")
+	}
+	d.Response.StatusCode = d.flow.Response.StatusCode
+	return nil
+}
+
+func (d *LogDumpContainer) loadResponseHeaders() error {
+	if d.flow.Response.Header == nil {
+		return fmt.Errorf("response headers are nil, unable to extract response headers")
+	}
 	d.Response.Header = d.flow.Response.Header
+	return nil
 }
 
 func (d *LogDumpContainer) loadResponseBody() error {
@@ -103,8 +140,12 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 		SchemaVersion: SchemaVersion,
 		Timestamp:     time.Now(),
 		flow:          &f,
-		Request:       &TrafficObject{headersToFilter: filterReqHeaders},
-		Response:      &TrafficObject{headersToFilter: filterRespHeaders},
+		Request: &TrafficObject{
+			headersToFilter: filterReqHeaders,
+		},
+		Response: &TrafficObject{
+			headersToFilter: filterRespHeaders,
+		},
 	}
 	errors := make([]error, 0)
 
@@ -123,23 +164,42 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 
 	if logSources.LogRequest {
 		log.Debug("Dumping request body")
-		err := dumpContainer.loadRequestBody()
-		if err != nil {
+		if err := dumpContainer.loadRequestMethod(); err != nil {
 			errors = append(errors, err)
 		}
+		if err := dumpContainer.loadRequestURL(); err != nil {
+			errors = append(errors, err)
+		}
+		if err := dumpContainer.loadRequestProto(); err != nil {
+			errors = append(errors, err)
+		}
+		if err := dumpContainer.loadRequestBody(); err != nil {
+			errors = append(errors, err)
+		}
+	} else {
+		// NPE defense
+		dumpContainer.Request.URL = &url.URL{}
 	}
 
 	if logSources.LogResponseHeaders {
 		log.Debug("Dumping response headers")
 		if dumpContainer.flow.Response != nil && dumpContainer.flow.Response.Header != nil {
-			dumpContainer.loadResponseHeaders()
-			dumpContainer.Response.filterHeaders()
+			err := dumpContainer.loadResponseHeaders()
+			if err != nil {
+				errors = append(errors, err)
+			} else {
+				dumpContainer.Response.filterHeaders()
+			}
 		}
 	}
 
 	if logSources.LogResponse {
 		log.Debug("Dumping response body")
 		err := dumpContainer.loadResponseBody()
+		if err != nil {
+			errors = append(errors, err)
+		}
+		err = dumpContainer.loadResponseStatusCode()
 		if err != nil {
 			errors = append(errors, err)
 		}

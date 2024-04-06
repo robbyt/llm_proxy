@@ -10,14 +10,10 @@ import (
 const UnknownAddr = "unknown"
 
 type ConnectionStatsContainer struct {
-	ClientAddress       string `json:"client_address"`
-	Method              string `json:"method"`
-	URL                 string `json:"url"`
-	ResponseCode        int    `json:"response_code"`
-	ContentLength       int    `json:"content_length"`
-	Duration            int64  `json:"duration_ms"`
-	ResponseContentType string `json:"response_content_type,omitempty"`
-	ProxyID             string `json:"proxy_id,omitempty"`
+	ClientAddress string `json:"client_address"`
+	URL           string `json:"url"`
+	Duration      int64  `json:"duration_ms"`
+	ProxyID       string `json:"proxy_id,omitempty"`
 }
 
 func (obj *ConnectionStatsContainer) ToJSON() []byte {
@@ -48,23 +44,9 @@ func getClientAddr(f *px.Flow) string {
 func newConnectionStatusContainer(f *px.Flow) *ConnectionStatsContainer {
 	logOutput := &ConnectionStatsContainer{
 		ClientAddress: getClientAddr(f),
-		Method:        f.Request.Method,
 		URL:           f.Request.URL.String(),
 		ProxyID:       f.Id.String(),
 	}
-
-	if f.Response != nil {
-		logOutput.ResponseCode = f.Response.StatusCode
-	}
-
-	if f.Response != nil && f.Response.Body != nil {
-		logOutput.ContentLength = len(f.Response.Body)
-	}
-
-	if f.Response != nil && f.Response.Header != nil {
-		logOutput.ResponseContentType = f.Response.Header.Get("Content-Type")
-	}
-
 	return logOutput
 }
 
