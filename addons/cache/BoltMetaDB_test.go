@@ -39,7 +39,8 @@ func TestBoltMetaDB_PutAndGet(t *testing.T) {
 				Path:   "/test",
 			},
 		}
-		trafficObjReq := schema.NewFromProxyRequest(req, []string{})
+		trafficObjReq, err := schema.NewProxyRequestFromMITMRequest(req, []string{})
+		require.NoError(t, err)
 		require.NotNil(t, trafficObjReq)
 
 		resp := &px.Response{
@@ -47,7 +48,8 @@ func TestBoltMetaDB_PutAndGet(t *testing.T) {
 			Header:     map[string][]string{"Content-Type": {"text/plain"}},
 			Body:       []byte("hello"),
 		}
-		trafficObjResp := schema.NewFromProxyResponse(resp, []string{})
+		trafficObjResp, err := schema.NewProxyResponseFromMITMResponse(resp, []string{})
+		require.NoError(t, err)
 		require.NotNil(t, trafficObjResp)
 
 		// empty cache
@@ -67,7 +69,7 @@ func TestBoltMetaDB_PutAndGet(t *testing.T) {
 		// now use the Get method again to lookup the response
 		gotResp, err = bMeta.Get(trafficObjReq.URL.String(), []byte{})
 		require.NoError(t, err)
-		assert.Equal(t, resp.StatusCode, gotResp.StatusCode)
+		assert.Equal(t, resp.StatusCode, gotResp.Status)
 		assert.Equal(t, resp.Header, gotResp.Header)
 		assert.Equal(t, resp.Body, []byte(gotResp.Body))
 	})

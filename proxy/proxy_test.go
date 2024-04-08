@@ -331,7 +331,7 @@ func TestProxyDirLoggerMode(t *testing.T) {
 		assert.Equal(t, "POST", lDump.Request.Method)
 
 		require.NotNil(t, lDump.Response)
-		assert.Equal(t, http.StatusOK, lDump.Response.StatusCode)
+		assert.Equal(t, http.StatusOK, lDump.Response.Status)
 		assert.Equal(t, "hits: 1\n", lDump.Response.Body)
 
 	})

@@ -10,11 +10,11 @@ import (
 
 func TestPlainText_flatten(t *testing.T) {
 	container := &schema.LogDumpContainer{
-		Request: &schema.TrafficObject{
+		Request: &schema.ProxyRequest{
 			Header: http.Header{"ReqHeader": []string{"ReqValue"}},
 			Body:   "Request Body",
 		},
-		Response: &schema.TrafficObject{
+		Response: &schema.ProxyResponse{
 			Header: http.Header{"RespHeader": []string{"RespValue"}},
 			Body:   "Response Body",
 		},

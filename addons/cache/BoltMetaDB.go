@@ -44,7 +44,7 @@ func (c *BoltMetaDB) Close() error {
 //
 // The request URL can be considered the primary index (different files per URL),
 // and the body is the secondary index.
-func (c *BoltMetaDB) Get(identifier string, body []byte) (response *schema.TrafficObject, err error) {
+func (c *BoltMetaDB) Get(identifier string, body []byte) (response *schema.ProxyResponse, err error) {
 	// check the db if a matching response exists
 	valueBytes, err := c.db.GetBytesSafe(identifier, []byte(body))
 	if err != nil {
@@ -55,7 +55,7 @@ func (c *BoltMetaDB) Get(identifier string, body []byte) (response *schema.Traff
 		return nil, nil
 	}
 
-	newResponse, err := schema.NewFromJSONBytes(valueBytes, c.filterRespHeaders)
+	newResponse, err := schema.NewProxyResponseFromJSONBytes(valueBytes, c.filterRespHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling response: %s", err)
 	}
@@ -67,7 +67,7 @@ func (c *BoltMetaDB) Get(identifier string, body []byte) (response *schema.Traff
 // Put receives a request and response, pulls out the request URL, uses that
 // URL as a cache "identifier" (to use the correct storage DB), and then stores
 // the response in cache based on the request body.
-func (c *BoltMetaDB) Put(request *schema.TrafficObject, response *schema.TrafficObject) error {
+func (c *BoltMetaDB) Put(request *schema.ProxyRequest, response *schema.ProxyResponse) error {
 	if request.URL == nil || request.URL.String() == "" {
 		return fmt.Errorf("request URL is nil or empty")
 	}
