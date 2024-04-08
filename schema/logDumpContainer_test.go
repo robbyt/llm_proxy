@@ -157,7 +157,7 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			filterReqHeaders:        []string{"Delete-Me-Request"},
 			filterRespHeaders:       []string{"Delete-Me-Response"},
 			expectedConnectionStats: getDefaultConnectionStats(),
-			expectedRequestHeaders:  "Content-Type: [application/json]\r\n",
+			expectedRequestHeaders:  "",
 			expectedResponseHeaders: "Content-Type: [application/json]\r\n",
 			expectedResponseCode:    http.StatusOK,
 			expectedResponseBody:    `{"status": "success"}`,
@@ -202,7 +202,7 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			expectedRequestProto:    "HTTP/1.1",
 			expectedRequestHeaders:  "Content-Type: [application/json]\r\n",
 			expectedRequestBody:     `{"key": "value"}`,
-			expectedResponseHeaders: "Content-Type: [application/json]\r\n",
+			expectedResponseHeaders: "",
 			expectedResponseBody:    "",
 		},
 	}
@@ -217,49 +217,9 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 			assert.Equal(t, tc.expectedRequestProto, container.Request.Proto)
 			assert.Equal(t, tc.expectedRequestHeaders, container.Request.HeaderString())
 			assert.Equal(t, tc.expectedRequestBody, container.Request.Body)
-			assert.Equal(t, tc.expectedResponseCode, container.Response.StatusCode)
+			assert.Equal(t, tc.expectedResponseCode, container.Response.Status)
 			assert.Equal(t, tc.expectedResponseHeaders, container.Response.HeaderString())
 			assert.Equal(t, tc.expectedResponseBody, container.Response.Body)
 		})
 	}
-}
-
-func TestValidateFlowObj(t *testing.T) {
-	t.Run("flow is nil", func(t *testing.T) {
-		logSources := config.LogSourceConfig{
-			LogRequestHeaders:  true,
-			LogRequest:         true,
-			LogResponseHeaders: true,
-			LogResponse:        true,
-		}
-		// validateFlowObj(nil, &logSources)
-		ls := validateFlowObj(nil, logSources)
-		assert.False(t, ls.LogRequestHeaders)
-		assert.False(t, ls.LogRequest)
-		assert.False(t, ls.LogResponseHeaders)
-		assert.False(t, ls.LogResponse)
-	})
-
-	t.Run("request is nil", func(t *testing.T) {
-		logSources := config.LogSourceConfig{
-			LogRequestHeaders: true,
-			LogRequest:        true,
-		}
-		flow := &px.Flow{}
-		ls := validateFlowObj(flow, logSources)
-		assert.False(t, ls.LogRequestHeaders)
-		assert.False(t, ls.LogRequest)
-	})
-
-	t.Run("response is nil", func(t *testing.T) {
-		logSources := config.LogSourceConfig{
-			LogResponseHeaders: true,
-			LogResponse:        true,
-		}
-		flow := &px.Flow{}
-		ls := validateFlowObj(flow, logSources)
-		assert.False(t, ls.LogResponseHeaders)
-		assert.False(t, ls.LogResponse)
-	})
-
 }

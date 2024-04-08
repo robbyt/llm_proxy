@@ -11,11 +11,11 @@ import (
 
 func TestJSONFormatter(t *testing.T) {
 	container := &schema.LogDumpContainer{
-		Request: &schema.TrafficObject{
+		Request: &schema.ProxyRequest{
 			Header: http.Header{"ReqHeader": []string{"ReqValue"}},
 			Body:   "Request Body",
 		},
-		Response: &schema.TrafficObject{
+		Response: &schema.ProxyResponse{
 			Header: http.Header{"RespHeader": []string{"RespValue"}},
 			Body:   "Response Body",
 		},
@@ -63,8 +63,8 @@ func TestJSONFormatter(t *testing.T) {
 
 func TestJSONFormatter_Empty(t *testing.T) {
 	container := &schema.LogDumpContainer{
-		Request:  &schema.TrafficObject{},
-		Response: &schema.TrafficObject{},
+		Request:  &schema.ProxyRequest{},
+		Response: &schema.ProxyResponse{},
 	}
 	j := &JSON{}
 	expectedJSON := `{

@@ -107,16 +107,16 @@ func (c *ResponseCacheAddon) Response(f *px.Flow) {
 		}
 
 		// convert the request to an internal TrafficObject
-		tObjReq := schema.NewFromProxyRequest(f.Request, c.filterReqHeaders)
-		if tObjReq == nil {
+		tObjReq, err := schema.NewProxyRequestFromMITMRequest(f.Request, c.filterReqHeaders)
+		if err != nil {
 			log.Errorf("error creating TrafficObject from request: %s", f.Request.URL)
 			return
 		}
 
 		// convert the response to an internal TrafficObject
-		tObjResp := schema.NewFromProxyResponse(f.Response, c.filterRespHeaders)
-		if tObjResp == nil {
-			log.Errorf("error creating TrafficObject from response: %s", f.Request.URL)
+		tObjResp, err := schema.NewProxyResponseFromMITMResponse(f.Response, c.filterRespHeaders)
+		if err != nil {
+			log.Errorf("error creating TrafficObject from response: %s", err)
 			return
 		}
 

@@ -96,7 +96,7 @@ func TestRequest(t *testing.T) {
 		"bolt", tmpDir,
 		filterReqHeaders, filterRespHeaders,
 	)
-	require.Nil(t, err)
+	require.Nil(t, err, "No error creating cache addon")
 
 	t.Run("cache miss", func(t *testing.T) {
 		// first request made with an empty request body
@@ -115,9 +115,9 @@ func TestRequest(t *testing.T) {
 
 		// simulate the request hitting the addon
 		respCacheAddon.Request(flow)
-		require.Nil(t, flow.Response) // nil response means cache miss
-		require.NotEmpty(t, flow.Request.Header.Get("X-Cache"))
-		assert.Equal(t, "MISS", flow.Request.Header.Get("X-Cache"))
+		require.Nil(t, flow.Response, "nil response means cache miss")
+		require.NotEmpty(t, flow.Request.Header.Get("X-Cache"), "expected X-Cache header to exist")
+		assert.Equal(t, "MISS", flow.Request.Header.Get("X-Cache"), "expected X-Cache value to be MISS")
 	})
 
 	t.Run("cache hit", func(t *testing.T) {
@@ -125,7 +125,11 @@ func TestRequest(t *testing.T) {
 		flow := &px.Flow{
 			Request: &px.Request{
 				Method: "POST",
-				URL:    &url.URL{Path: "/test"},
+				URL: &url.URL{
+					Scheme: "http",
+					Host:   "example.com",
+					Path:   "/test",
+				},
 				Header: http.Header{
 					"Host":    []string{"example.com"},
 					"Header1": []string{"value1"},
@@ -145,21 +149,22 @@ func TestRequest(t *testing.T) {
 		}
 		identifier := flow.Request.URL.String()
 
-		// unable to check length, because bucket doesn't yet exist in cache
 		len, err := respCacheAddon.cache.Len(flow.Request.URL.String())
-		require.Error(t, err)
-		require.Zero(t, len)
+		require.Error(t, err, "error expected when checking length of non-existent bucket")
+		require.Zero(t, len, "nothing in cache yet")
 
-		// create traffic objects for the request and response, check filtering
-		tReq := schema.NewFromProxyRequest(flow.Request, filterReqHeaders)
+		// create traffic objects for the request and response, check header loading
+		tReq, err := schema.NewProxyRequestFromMITMRequest(flow.Request, filterReqHeaders)
+		require.NoError(t, err)
 		require.Empty(t, tReq.Header.Get("X-Cache"))
-		require.Empty(t, tReq.Header.Get("header1"))    // deleted by filterReqHeaders
-		require.NotEmpty(t, tReq.Header.Get("header2")) // not deleted by filterReqHeaders
+		require.Empty(t, tReq.Header.Get("header1"), "header should be deleted by factory function")
+		require.NotEmpty(t, tReq.Header.Get("header2"), "header shouldn't be deleted by factory function")
 
-		tResp := schema.NewFromProxyResponse(resp, filterRespHeaders)
+		tResp, err := schema.NewProxyResponseFromMITMResponse(resp, filterRespHeaders)
+		require.NoError(t, err)
 		require.Empty(t, tResp.Header.Get("X-Cache"))
-		require.NotEmpty(t, tResp.Header.Get("header1")) // not deleted by filterRespHeaders
-		require.Empty(t, tResp.Header.Get("header2"))    // deleted by filterRespHeaders
+		require.NotEmpty(t, tResp.Header.Get("header1"), "header should be deleted by factory function")
+		require.Empty(t, tResp.Header.Get("header2"), "header shouldn't be deleted by factory function")
 
 		// store the response in cache using an internal method, to simulate the real response storage
 		respCacheAddon.cache.Put(tReq, tResp)
