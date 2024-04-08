@@ -7,12 +7,13 @@ import (
 
 	px "github.com/kardianos/mitmproxy/proxy"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/robbyt/llm_proxy/config"
 )
 
-func getDefaultFlow() px.Flow {
-	return px.Flow{
+func getDefaultFlow() *px.Flow {
+	return &px.Flow{
 		Request: &px.Request{
 			Method: "GET",
 			URL: &url.URL{
@@ -50,7 +51,7 @@ func getDefaultConnectionStats() *ConnectionStatsContainer {
 func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 	testCases := []struct {
 		name                    string
-		flow                    px.Flow
+		flow                    *px.Flow
 		logSources              config.LogSourceConfig
 		filterReqHeaders        []string
 		filterRespHeaders       []string
@@ -210,7 +211,8 @@ func TestNewLogDumpDiskContainer_JSON(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			container := NewLogDumpContainer(tc.flow, tc.logSources, 0, tc.filterReqHeaders, tc.filterRespHeaders)
+			container, err := NewLogDumpContainer(tc.flow, tc.logSources, 0, tc.filterReqHeaders, tc.filterRespHeaders)
+			require.Nil(t, err)
 			assert.Equal(t, tc.expectedConnectionStats, container.ConnectionStats)
 			assert.Equal(t, tc.expectedRequestMethod, container.Request.Method)
 			assert.Equal(t, tc.expectedRequestURL, container.Request.URL.String())

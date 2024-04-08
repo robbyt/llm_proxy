@@ -44,7 +44,11 @@ func (d *MegaDumpAddon) Requestheaders(f *px.Flow) {
 		doneAt := time.Since(start).Milliseconds()
 
 		// load the selected fields into a container object
-		dumpContainer := schema.NewLogDumpContainer(*f, d.logSources, doneAt, d.filterReqHeaders, d.filterRespHeaders)
+		dumpContainer, err := schema.NewLogDumpContainer(f, d.logSources, doneAt, d.filterReqHeaders, d.filterRespHeaders)
+		if err != nil {
+			log.Error(err)
+			return
+		}
 
 		id := f.Id.String() // TODO: is the internal request ID unique enough?
 

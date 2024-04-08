@@ -36,7 +36,7 @@ func TestNewLogLine(t *testing.T) {
 		Id: uuid.NewV4(),
 	}
 
-	logLine := NewConnectionStatusContainerWithDuration(f, 100)
+	logLine := NewConnectionStatusContainerWithDuration(&f, 100)
 	assert.NotNil(t, logLine)
 	assert.Equal(t, "unknown", logLine.ClientAddress)
 	assert.Equal(t, "https://example.com/testpath", logLine.URL)

@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"errors"
 	"net/url"
 	"time"
 
@@ -23,7 +24,11 @@ type LogDumpContainer struct {
 }
 
 // NewLogDumpContainer returns a LogDumpContainer with *only* the fields requested in logSources populated
-func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt int64, filterReqHeaders, filterRespHeaders []string) *LogDumpContainer {
+func NewLogDumpContainer(f *px.Flow, logSources config.LogSourceConfig, doneAt int64, filterReqHeaders, filterRespHeaders []string) (*LogDumpContainer, error) {
+	if f == nil {
+		return nil, errors.New("flow is nil")
+	}
+
 	var err error
 	errs := make([]error, 0)
 
@@ -68,5 +73,5 @@ func NewLogDumpContainer(f px.Flow, logSources config.LogSourceConfig, doneAt in
 		}
 	}
 
-	return ldc
+	return ldc, nil
 }
