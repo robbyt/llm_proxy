@@ -1,7 +1,7 @@
 package writers
 
 import (
-	md "github.com/robbyt/llm_proxy/addons/megadumper"
+	md "github.com/robbyt/llm_proxy/proxy/addons/megadumper"
 	"github.com/robbyt/llm_proxy/fileUtils"
 	log "github.com/sirupsen/logrus"
 )

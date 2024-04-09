@@ -9,9 +9,9 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
-	md "github.com/robbyt/llm_proxy/addons/megadumper"
-	"github.com/robbyt/llm_proxy/addons/megadumper/formatters"
-	"github.com/robbyt/llm_proxy/addons/megadumper/writers"
+	md "github.com/robbyt/llm_proxy/proxy/addons/megadumper"
+	"github.com/robbyt/llm_proxy/proxy/addons/megadumper/formatters"
+	"github.com/robbyt/llm_proxy/proxy/addons/megadumper/writers"
 	"github.com/robbyt/llm_proxy/config"
 	"github.com/robbyt/llm_proxy/schema"
 )

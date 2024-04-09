@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/robbyt/llm_proxy/addons/cache/key"
+	"github.com/robbyt/llm_proxy/proxy/addons/cache/key"
 )
 
 // Engine is an interface for a storage engine, backed by some database for persistence

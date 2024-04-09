@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/robbyt/llm_proxy/addons/cache/storage"
-	"github.com/robbyt/llm_proxy/addons/cache/storage/boltDB_Engine"
+	"github.com/robbyt/llm_proxy/proxy/addons/cache/storage"
+	"github.com/robbyt/llm_proxy/proxy/addons/cache/storage/boltDB_Engine"
 )
 
 func TestNewBadgerDB_CacheMap(t *testing.T) {

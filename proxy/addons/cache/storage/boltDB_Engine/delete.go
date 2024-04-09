@@ -5,7 +5,7 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
-	"github.com/robbyt/llm_proxy/addons/cache/key"
+	"github.com/robbyt/llm_proxy/proxy/addons/cache/key"
 )
 
 // Delete removes a key from the database

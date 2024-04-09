@@ -10,8 +10,8 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/robbyt/llm_proxy/addons/cache"
-	"github.com/robbyt/llm_proxy/addons/megadumper/formatters"
+	"github.com/robbyt/llm_proxy/proxy/addons/cache"
+	"github.com/robbyt/llm_proxy/proxy/addons/megadumper/formatters"
 	"github.com/robbyt/llm_proxy/schema"
 )
 

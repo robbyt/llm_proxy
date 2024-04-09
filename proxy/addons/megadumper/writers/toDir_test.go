@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	md "github.com/robbyt/llm_proxy/addons/megadumper"
-	"github.com/robbyt/llm_proxy/addons/megadumper/writers"
+	md "github.com/robbyt/llm_proxy/proxy/addons/megadumper"
+	"github.com/robbyt/llm_proxy/proxy/addons/megadumper/writers"
 	"github.com/stretchr/testify/assert"
 )
 

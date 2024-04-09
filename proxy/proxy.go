@@ -13,8 +13,8 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/robbyt/llm_proxy/addons"
-	md "github.com/robbyt/llm_proxy/addons/megadumper"
+	"github.com/robbyt/llm_proxy/proxy/addons"
+	md "github.com/robbyt/llm_proxy/proxy/addons/megadumper"
 	"github.com/robbyt/llm_proxy/config"
 )
 
