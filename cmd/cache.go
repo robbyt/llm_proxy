@@ -32,6 +32,7 @@ code of 500 or higher.`,
 
 func init() {
 	rootCmd.AddCommand(cacheCmd)
+	cacheCmd.SuggestFor = []string{"cache-proxy", "caching-proxy", "cash-proxy", "cash"}
 	cacheCmd.Flags().StringVarP(
 		&cfg.Cache.Dir, "cache", "o", cfg.Cache.Dir,
 		"Directory to store the cache files",
