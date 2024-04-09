@@ -1,16 +1,11 @@
 package memory_Engine
 
 import (
-	"encoding/base64"
 	"fmt"
 
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/robbyt/llm_proxy/addons/cache/key"
 )
-
-func formatKey(identifier string, key []byte) string {
-	safeId := base64.URLEncoding.EncodeToString([]byte(identifier))
-	return fmt.Sprintf("%s:%s", safeId, string(key))
-}
 
 // MemoryStorage is a simple in-memory storage engine
 type MemoryStorage struct {
@@ -18,20 +13,18 @@ type MemoryStorage struct {
 }
 
 // GetBytes gets a value from the database using a byte key
-func (m *MemoryStorage) GetBytes(identifier string, key []byte) ([]byte, error) {
-	keyStr := formatKey(identifier, key)
-	val, ok := m.cache.Get(keyStr)
+func (m *MemoryStorage) GetBytes(identifier string, key key.Key) ([]byte, error) {
+	val, ok := m.cache.Get(key.String())
 	if !ok {
-		return nil, fmt.Errorf("key not found: %s", keyStr)
+		return nil, fmt.Errorf("key not found: %s", key.String())
 	}
 
 	return val, nil
 }
 
 // GetBytesSafe attempts to get a value from the database, and returns nil if not found
-func (m *MemoryStorage) GetBytesSafe(identifier string, key []byte) ([]byte, error) {
-	keyStr := formatKey(identifier, key)
-	val, ok := m.cache.Get(keyStr)
+func (m *MemoryStorage) GetBytesSafe(identifier string, key key.Key) ([]byte, error) {
+	val, ok := m.cache.Get(key.String())
 	if !ok {
 		return nil, nil
 	}
@@ -40,9 +33,8 @@ func (m *MemoryStorage) GetBytesSafe(identifier string, key []byte) ([]byte, err
 }
 
 // SetBytes sets a value in the database using a byte key
-func (m *MemoryStorage) SetBytes(identifier string, key, value []byte) error {
-	keyStr := formatKey(identifier, key)
-	m.cache.Add(keyStr, value)
+func (m *MemoryStorage) SetBytes(identifier string, key key.Key, value []byte) error {
+	m.cache.Add(key.String(), value)
 	return nil
 }
 

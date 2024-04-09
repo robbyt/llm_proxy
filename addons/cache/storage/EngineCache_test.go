@@ -1,21 +1,22 @@
-package storage
+package storage_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/robbyt/llm_proxy/addons/cache/storage"
 	"github.com/robbyt/llm_proxy/addons/cache/storage/boltDB_Engine"
 )
 
 func TestNewBadgerDB_CacheMap(t *testing.T) {
-	cacheMap := NewCacheMap()
+	cacheMap := storage.NewCacheMap()
 	assert.NotNil(t, cacheMap)
 	assert.Equal(t, 0, cacheMap.Len())
 }
 
 func TestBadgerDB_CacheMap_PutAndGet(t *testing.T) {
-	cacheMap := NewCacheMap()
+	cacheMap := storage.NewCacheMap()
 	tempDir := t.TempDir()
 
 	db, _ := boltDB_Engine.NewDB(tempDir + "/test.db")
@@ -35,7 +36,7 @@ func TestBadgerDB_CacheMap_PutAndGet(t *testing.T) {
 }
 
 func TestBadgerDB_CacheMap_DeleteAndClear(t *testing.T) {
-	cacheMap := NewCacheMap()
+	cacheMap := storage.NewCacheMap()
 	tempDir := t.TempDir()
 
 	badgerDB, _ := boltDB_Engine.NewDB(tempDir + "/test.db")
