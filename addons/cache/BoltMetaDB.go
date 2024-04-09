@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/robbyt/llm_proxy/addons/cache/key"
 	"github.com/robbyt/llm_proxy/addons/cache/storage/boltDB_Engine"
 	"github.com/robbyt/llm_proxy/schema"
 )
@@ -46,7 +47,7 @@ func (c *BoltMetaDB) Close() error {
 // and the body is the secondary index.
 func (c *BoltMetaDB) Get(identifier string, body []byte) (response *schema.ProxyResponse, err error) {
 	// check the db if a matching response exists
-	valueBytes, err := c.db.GetBytesSafe(identifier, []byte(body))
+	valueBytes, err := c.db.GetBytesSafe(identifier, key.NewKey(body))
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,6 @@ func (c *BoltMetaDB) Put(request *schema.ProxyRequest, response *schema.ProxyRes
 		return fmt.Errorf("request URL is nil or empty")
 	}
 	identifier := request.URL.String()
-	reqBody := []byte(request.Body)
 
 	// Store the encoded data in the targetDB
 	respJSON, err := json.Marshal(response)
@@ -80,7 +80,7 @@ func (c *BoltMetaDB) Put(request *schema.ProxyRequest, response *schema.ProxyRes
 		return fmt.Errorf("error marshalling response object: %s", err)
 	}
 
-	err = c.db.SetBytes(identifier, reqBody, respJSON)
+	err = c.db.SetBytes(identifier, key.NewKeyStr(request.Body), respJSON)
 	if err != nil {
 		log.Fatal("set bytes error:", err)
 	}

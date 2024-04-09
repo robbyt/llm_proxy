@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/robbyt/llm_proxy/addons/cache/key"
 	"github.com/robbyt/llm_proxy/addons/fileUtils"
 	bolt "go.etcd.io/bbolt"
 )
@@ -36,17 +37,16 @@ func (b *DB) Len(identifier string) (int, error) {
 }
 
 // GetBytes gets a value from the database using a byte key
-func (b *DB) GetBytes(identifier string, key []byte) (value []byte, err error) {
-	key = keyFormatter(key)
+func (b *DB) GetBytes(identifier string, key key.Key) (value []byte, err error) {
 	err = b.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(identifier))
 		if bucket == nil {
 			return BucketNotFoundError{Identifier: identifier}
 		}
 
-		v := bucket.Get(key)
+		v := bucket.Get(key.Get())
 		if v == nil {
-			return ErrKeyNotFound{Identifier: identifier, Key: key}
+			return ErrKeyNotFound{Identifier: identifier, Key: key.Get()}
 		}
 
 		// Make a copy of the value, so it's readable outside of this transaction
@@ -59,7 +59,7 @@ func (b *DB) GetBytes(identifier string, key []byte) (value []byte, err error) {
 }
 
 // GetBytesSafe attempts to get a value from the database, and returns nil if not found
-func (b *DB) GetBytesSafe(identifier string, key []byte) ([]byte, error) {
+func (b *DB) GetBytesSafe(identifier string, key key.Key) ([]byte, error) {
 	val, err := b.GetBytes(identifier, key)
 	if err != nil {
 		var keyNotFoundError ErrKeyNotFound
@@ -73,15 +73,14 @@ func (b *DB) GetBytesSafe(identifier string, key []byte) ([]byte, error) {
 }
 
 // SetBytes sets a value in the database using a byte key
-func (b *DB) SetBytes(identifier string, key, value []byte) error {
-	key = keyFormatter(key)
+func (b *DB) SetBytes(identifier string, key key.Key, value []byte) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte(identifier))
 		if err != nil {
 			return fmt.Errorf("error creating/loading bucket: %s", err)
 		}
 
-		err = bucket.Put(key, value)
+		err = bucket.Put(key.Get(), value)
 		if err != nil {
 			return fmt.Errorf("error putting value: %s", err)
 		}

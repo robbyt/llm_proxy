@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/robbyt/llm_proxy/addons/cache/key"
 )
 
 func TestNewBoltDB(t *testing.T) {
@@ -46,72 +48,74 @@ func TestBoltDB_GetSetStr(t *testing.T) {
 
 	db, err := NewDB(testDB)
 	require.NoError(t, err)
+	testKey := key.NewKeyStr("key")
+	emptyKey := key.NewKeyStr("")
 	defer db.Close()
 
 	t.Run("normal set and get", func(t *testing.T) {
-		err = db.SetBytes(t.Name(), []byte("key"), []byte("value"))
+		err = db.SetBytes(t.Name(), testKey, []byte("value"))
 		require.NoError(t, err)
 
-		val, err := db.GetBytes(t.Name(), []byte("key"))
-		require.NoError(t, err)
-		assert.Equal(t, "value", string(val))
-
-		val, err = db.GetBytesSafe(t.Name(), []byte("key"))
+		val, err := db.GetBytes(t.Name(), testKey)
 		require.NoError(t, err)
 		assert.Equal(t, "value", string(val))
 
-		err = db.Delete(t.Name(), []byte("key"))
+		val, err = db.GetBytesSafe(t.Name(), testKey)
+		require.NoError(t, err)
+		assert.Equal(t, "value", string(val))
+
+		err = db.Delete(t.Name(), testKey)
 		require.NoError(t, err)
 
-		val, err = db.GetBytesSafe(t.Name(), []byte("key"))
+		val, err = db.GetBytesSafe(t.Name(), testKey)
 		require.NoError(t, err)
 		assert.Nil(t, val)
 	})
 
 	t.Run("set and get empty string", func(t *testing.T) {
-		err = db.SetBytes(t.Name(), []byte("key"), []byte(""))
+		err = db.SetBytes(t.Name(), testKey, []byte(""))
 		require.NoError(t, err)
 
-		val, err := db.GetBytes(t.Name(), []byte("key"))
+		val, err := db.GetBytes(t.Name(), testKey)
 		require.NoError(t, err)
 		assert.Equal(t, "", string(val))
 	})
 
 	t.Run("set and get empty key", func(t *testing.T) {
-		err = db.SetBytes(t.Name(), []byte(""), []byte("value"))
+		err = db.SetBytes(t.Name(), emptyKey, []byte("value"))
 		require.NoError(t, err)
 
-		val, err := db.GetBytes(t.Name(), []byte(""))
+		val, err := db.GetBytes(t.Name(), emptyKey)
 		require.NoError(t, err)
 		assert.Equal(t, "value", string(val))
 	})
 
 	t.Run("set and get empty key and value", func(t *testing.T) {
-		err = db.SetBytes(t.Name(), []byte(""), []byte(""))
+		err = db.SetBytes(t.Name(), emptyKey, []byte(""))
 		require.NoError(t, err)
 
-		val, err := db.GetBytes(t.Name(), []byte(""))
+		val, err := db.GetBytes(t.Name(), emptyKey)
 		require.NoError(t, err)
 		assert.Equal(t, "", string(val))
 	})
 
 	t.Run("set and get empty bucket", func(t *testing.T) {
-		err = db.SetBytes("", []byte("key"), []byte("value"))
+		err = db.SetBytes("", emptyKey, []byte("value"))
 		require.Error(t, err)
 	})
 
 	t.Run("set and get empty bucket and key", func(t *testing.T) {
-		err = db.SetBytes("", []byte(""), []byte("value"))
+		err = db.SetBytes("", emptyKey, []byte("value"))
 		require.Error(t, err)
 	})
 
 	t.Run("set and get empty bucket and key and value", func(t *testing.T) {
-		err = db.SetBytes("", []byte(""), []byte(""))
+		err = db.SetBytes("", emptyKey, []byte(""))
 		require.Error(t, err)
 	})
 
 	t.Run("set and get using StrSafe", func(t *testing.T) {
-		val, err := db.GetBytesSafe(t.Name(), []byte("key"))
+		val, err := db.GetBytesSafe(t.Name(), emptyKey)
 		require.NoError(t, err)
 		assert.Nil(t, val)
 	})
@@ -141,15 +145,16 @@ func TestBoltDB_GetSetStr(t *testing.T) {
 func TestBoltDB_GetSetBytes(t *testing.T) {
 	tempDir := t.TempDir()
 	testDB := tempDir + "/test.db"
+	testKey := key.NewKeyStr("key")
 
 	db, err := NewDB(testDB)
 	require.NoError(t, err)
 	defer db.Close()
 
-	err = db.SetBytes("test", []byte("key"), []byte("value"))
+	err = db.SetBytes("test", testKey, []byte("value"))
 	require.NoError(t, err)
 
-	val, err := db.GetBytes("test", []byte("key"))
+	val, err := db.GetBytes("test", testKey)
 	require.NoError(t, err)
 	assert.Equal(t, []byte("value"), val)
 }
