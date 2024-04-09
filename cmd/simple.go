@@ -24,5 +24,5 @@ var simpleCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(simpleCmd)
-	simpleCmd.SuggestFor = []string{"proxy", "simple-proxy", "simpleproxy"}
+	simpleCmd.SuggestFor = simple_suggestions
 }

@@ -27,7 +27,7 @@ will contain the request and response in JSON format.
 
 func init() {
 	rootCmd.AddCommand(dirLoggerCmd)
-	dirLoggerCmd.SuggestFor = []string{"logger", "log", "dirlog", "dir-logger"}
+	dirLoggerCmd.SuggestFor = dir_logger_suggestions
 
 	// setting the default value here instead of in the config struct factory, because setting
 	// this to _something_ reconfigures the output, so it writes multi logs to a dir instead of
