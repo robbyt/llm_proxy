@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/robbyt/llm_proxy/config"
@@ -21,12 +20,9 @@ and retrieve the responses. This mode is useful for development and for CI, beca
 number of requests to the upstream server. The cache server will respond with the same status code,
 headers, and body as the previous response. The cache server will not store responses with a status
 code of 500 or higher.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg.AppMode = config.CacheMode
-		err := proxy.Run(cfg)
-		if err != nil {
-			log.Fatal(err)
-		}
+		return proxy.Run(cfg)
 	},
 }
 

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/robbyt/llm_proxy/config"
@@ -16,12 +15,9 @@ var dirLoggerCmd = &cobra.Command{
 Each request/response pair will be written to a file, identified by a unique ID. The file
 will contain the request and response in JSON format.
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg.AppMode = config.DirLoggerMode
-		err := proxy.Run(cfg)
-		if err != nil {
-			log.Fatal(err)
-		}
+		return proxy.Run(cfg)
 	},
 }
 
