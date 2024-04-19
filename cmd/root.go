@@ -20,6 +20,7 @@ This is useful for:
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		cfg.SetLoggerLevel()
 	},
+	SilenceUsage: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
