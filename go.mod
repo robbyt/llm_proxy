@@ -1,4 +1,4 @@
-module github.com/robbyt/llm_proxy
+module github.com/proxati/llm_proxy
 
 go 1.22
 

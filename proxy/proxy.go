@@ -13,9 +13,9 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/robbyt/llm_proxy/proxy/addons"
-	md "github.com/robbyt/llm_proxy/proxy/addons/megadumper"
-	"github.com/robbyt/llm_proxy/config"
+	"github.com/proxati/llm_proxy/proxy/addons"
+	md "github.com/proxati/llm_proxy/proxy/addons/megadumper"
+	"github.com/proxati/llm_proxy/config"
 )
 
 func newCA(certDir string) (*cert.CA, error) {

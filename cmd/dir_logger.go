@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/robbyt/llm_proxy/config"
-	"github.com/robbyt/llm_proxy/proxy"
+	"github.com/proxati/llm_proxy/config"
+	"github.com/proxati/llm_proxy/proxy"
 )
 
 // dirLoggerCmd represents the demo command

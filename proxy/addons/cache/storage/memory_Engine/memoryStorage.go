@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/robbyt/llm_proxy/proxy/addons/cache/key"
+	"github.com/proxati/llm_proxy/proxy/addons/cache/key"
 )
 
 // MemoryStorage is a simple in-memory storage engine

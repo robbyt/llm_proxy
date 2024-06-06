@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/robbyt/llm_proxy/schema"
+	"github.com/proxati/llm_proxy/schema"
 	"github.com/stretchr/testify/assert"
 )
 

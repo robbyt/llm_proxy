@@ -3,8 +3,8 @@ package addons
 import (
 	"testing"
 
-	md "github.com/robbyt/llm_proxy/proxy/addons/megadumper"
-	"github.com/robbyt/llm_proxy/config"
+	md "github.com/proxati/llm_proxy/proxy/addons/megadumper"
+	"github.com/proxati/llm_proxy/config"
 	"github.com/stretchr/testify/assert"
 )
 

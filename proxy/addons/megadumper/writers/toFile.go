@@ -4,8 +4,8 @@ import (
 	"io"
 	"path/filepath"
 
-	md "github.com/robbyt/llm_proxy/proxy/addons/megadumper"
-	"github.com/robbyt/llm_proxy/fileUtils"
+	md "github.com/proxati/llm_proxy/proxy/addons/megadumper"
+	"github.com/proxati/llm_proxy/fileUtils"
 
 	log "github.com/sirupsen/logrus"
 )

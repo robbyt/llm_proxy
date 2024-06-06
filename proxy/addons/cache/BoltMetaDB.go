@@ -8,9 +8,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/robbyt/llm_proxy/proxy/addons/cache/key"
-	"github.com/robbyt/llm_proxy/proxy/addons/cache/storage/boltDB_Engine"
-	"github.com/robbyt/llm_proxy/schema"
+	"github.com/proxati/llm_proxy/proxy/addons/cache/key"
+	"github.com/proxati/llm_proxy/proxy/addons/cache/storage/boltDB_Engine"
+	"github.com/proxati/llm_proxy/schema"
 )
 
 const (

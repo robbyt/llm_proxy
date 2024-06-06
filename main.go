@@ -23,7 +23,7 @@ SOFTWARE.
 */
 package main
 
-import "github.com/robbyt/llm_proxy/cmd"
+import "github.com/proxati/llm_proxy/cmd"
 
 func main() {
 	cmd.Execute()

@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/robbyt/llm_proxy/schema"
+	"github.com/proxati/llm_proxy/schema"
 )
 
 type DB interface {

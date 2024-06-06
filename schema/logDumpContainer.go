@@ -8,7 +8,7 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/robbyt/llm_proxy/config"
+	"github.com/proxati/llm_proxy/config"
 )
 
 const SchemaVersion string = "v2"

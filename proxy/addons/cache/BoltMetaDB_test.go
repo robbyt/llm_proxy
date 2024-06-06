@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	px "github.com/kardianos/mitmproxy/proxy"
-	"github.com/robbyt/llm_proxy/schema"
+	"github.com/proxati/llm_proxy/schema"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -6,7 +6,7 @@ It is heavily based on [kardianos/mitmproxy](https://www.github.com/kardianos/mi
 ## How to use
 
 1. Install Go
-2. Run `go install github.com/robbyt/llm_proxy@latest`
+2. Run `go install github.com/proxati/llm_proxy@latest`
 3. Golang will download and compile this code, storing the binary in your `$GOPATH/bin` directory.
 4. By default this will compile the binary to `~/go/bin/llm_proxy`, try running `llm_proxy --help`
 5. Set your `HTTP_PROXY` and `HTTPS_PROXY` environment variables to `http://localhost:8080`
