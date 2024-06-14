@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/proxati/llm_proxy/config"
+	"github.com/proxati/llm_proxy/proxy/addons"
 	"github.com/proxati/llm_proxy/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -375,7 +376,7 @@ func TestProxyCache(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []byte("hits: 1\n"), body)
 		assert.Equal(t, int32(1), hitCounter.Load())
-		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
+		assert.Equal(t, addons.CacheStatusMiss, resp.Header.Get(addons.CacheStatusHeader))
 	})
 
 	t.Run("TestCacheHit", func(t *testing.T) {
@@ -391,7 +392,7 @@ func TestProxyCache(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []byte("hits: 1\n"), body)
 		assert.Equal(t, int32(1), hitCounter.Load())
-		assert.Equal(t, "MISS", resp.Header.Get("X-Cache"))
+		assert.Equal(t, addons.CacheStatusMiss, resp.Header.Get(addons.CacheStatusHeader))
 
 		// wait for the cache to be written
 		time.Sleep(defaultSleepTime)
@@ -408,7 +409,7 @@ func TestProxyCache(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []byte("hits: 1\n"), body)
 		assert.Equal(t, int32(1), hitCounter.Load()) // the counter should not be 6, because we got a cache hit
-		assert.Equal(t, "HIT", resp.Header.Get("X-Cache"))
+		assert.Equal(t, addons.CacheStatusHit, resp.Header.Get(addons.CacheStatusHeader))
 	})
 
 	// done with tests, send shutdown signals

@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	cacheStatusHeader = "X-Llm_proxy-Cache"
-	cacheStatusHit    = "HIT"
-	cacheStatusMiss   = "MISS"
+	CacheStatusHeader = "X-Llm_proxy-Cache"
+	CacheStatusHit    = "HIT"
+	CacheStatusMiss   = "MISS"
 )
 
 var cacheOnlyMethods = map[string]struct{}{
@@ -73,11 +73,11 @@ func (c *ResponseCacheAddon) Request(f *px.Flow) {
 		log.Debugf("cache hit for: %s", f.Request.URL)
 
 		// after setting the f.Response, other pending addons will be skipped!
-		cacheLookup.Header.Set(cacheStatusHeader, cacheStatusHit)
+		cacheLookup.Header.Set(CacheStatusHeader, CacheStatusHit)
 		f.Response = cacheLookup.ToProxyResponse()
 		return
 	}
-	f.Request.Header.Set(cacheStatusHeader, cacheStatusMiss)
+	f.Request.Header.Set(CacheStatusHeader, CacheStatusMiss)
 	log.Debugf("cache miss for: %s", f.Request.URL)
 }
 
@@ -89,10 +89,10 @@ func (c *ResponseCacheAddon) Response(f *px.Flow) {
 	}
 
 	// add a header to the response to indicate it was a cache miss
-	if f.Request != nil && f.Request.Header.Get(cacheStatusHeader) == cacheStatusMiss {
+	if f.Request != nil && f.Request.Header.Get(CacheStatusHeader) == CacheStatusMiss {
 		// abusing the request header as a context storage for the cache miss
 		if f.Response != nil {
-			f.Response.Header.Set(cacheStatusHeader, cacheStatusMiss)
+			f.Response.Header.Set(CacheStatusHeader, CacheStatusMiss)
 		}
 	}
 
