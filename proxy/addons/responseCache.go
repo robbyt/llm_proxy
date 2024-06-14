@@ -15,6 +15,12 @@ import (
 	"github.com/proxati/llm_proxy/schema"
 )
 
+const (
+	cacheStatusHeader = "X-Llm_proxy-Cache"
+	cacheStatusHit    = "HIT"
+	cacheStatusMiss   = "MISS"
+)
+
 var cacheOnlyMethods = map[string]struct{}{
 	"GET":     {},
 	"":        {},
@@ -67,11 +73,11 @@ func (c *ResponseCacheAddon) Request(f *px.Flow) {
 		log.Debugf("cache hit for: %s", f.Request.URL)
 
 		// after setting the f.Response, other pending addons will be skipped!
-		cacheLookup.Header.Set("X-Cache", "HIT")
+		cacheLookup.Header.Set(cacheStatusHeader, cacheStatusHit)
 		f.Response = cacheLookup.ToProxyResponse()
 		return
 	}
-	f.Request.Header.Set("X-Cache", "MISS")
+	f.Request.Header.Set(cacheStatusHeader, cacheStatusMiss)
 	log.Debugf("cache miss for: %s", f.Request.URL)
 }
 
@@ -83,10 +89,10 @@ func (c *ResponseCacheAddon) Response(f *px.Flow) {
 	}
 
 	// add a header to the response to indicate it was a cache miss
-	if f.Request != nil && f.Request.Header.Get("X-Cache") == "MISS" {
+	if f.Request != nil && f.Request.Header.Get(cacheStatusHeader) == cacheStatusMiss {
 		// abusing the request header as a context storage for the cache miss
 		if f.Response != nil {
-			f.Response.Header.Set("X-Cache", "MISS")
+			f.Response.Header.Set(cacheStatusHeader, cacheStatusMiss)
 		}
 	}
 
