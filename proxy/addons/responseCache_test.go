@@ -111,13 +111,13 @@ func TestRequest(t *testing.T) {
 				Body: []byte("req"),
 			},
 		}
-		require.Empty(t, flow.Request.Header.Get("X-Cache"))
+		require.Empty(t, flow.Request.Header.Get(CacheStatusHeader))
 
 		// simulate the request hitting the addon
 		respCacheAddon.Request(flow)
 		require.Nil(t, flow.Response, "nil response means cache miss")
-		require.NotEmpty(t, flow.Request.Header.Get("X-Cache"), "expected X-Cache header to exist")
-		assert.Equal(t, "MISS", flow.Request.Header.Get("X-Cache"), "expected X-Cache value to be MISS")
+		require.NotEmpty(t, flow.Request.Header.Get(CacheStatusHeader), "expected X-Cache header to exist")
+		assert.Equal(t, "MISS", flow.Request.Header.Get(CacheStatusHeader), "expected X-Cache value to be MISS")
 	})
 
 	t.Run("cache hit", func(t *testing.T) {
@@ -156,13 +156,13 @@ func TestRequest(t *testing.T) {
 		// create traffic objects for the request and response, check header loading
 		tReq, err := schema.NewProxyRequestFromMITMRequest(flow.Request, filterReqHeaders)
 		require.NoError(t, err)
-		require.Empty(t, tReq.Header.Get("X-Cache"))
+		require.Empty(t, tReq.Header.Get(CacheStatusHeader))
 		require.Empty(t, tReq.Header.Get("header1"), "header should be deleted by factory function")
 		require.NotEmpty(t, tReq.Header.Get("header2"), "header shouldn't be deleted by factory function")
 
 		tResp, err := schema.NewProxyResponseFromMITMResponse(resp, filterRespHeaders)
 		require.NoError(t, err)
-		require.Empty(t, tResp.Header.Get("X-Cache"))
+		require.Empty(t, tResp.Header.Get(CacheStatusHeader))
 		require.NotEmpty(t, tResp.Header.Get("header1"), "header should be deleted by factory function")
 		require.Empty(t, tResp.Header.Get("header2"), "header shouldn't be deleted by factory function")
 
@@ -175,12 +175,12 @@ func TestRequest(t *testing.T) {
 		require.Equal(t, 1, len)
 
 		// simulate a new request with the same URL, should be a hit now that it's in the cache
-		require.Empty(t, resp.Header.Get("X-Cache"))
+		require.Empty(t, resp.Header.Get(CacheStatusHeader))
 		respCacheAddon.Request(flow)
 		require.NotNil(t, flow.Response)
 		assert.Equal(t, resp.StatusCode, flow.Response.StatusCode)
 		assert.Equal(t, resp.Body, flow.Response.Body)
-		assert.Equal(t, "HIT", flow.Response.Header.Get("X-Cache"))
+		assert.Equal(t, "HIT", flow.Response.Header.Get(CacheStatusHeader))
 
 	})
 
