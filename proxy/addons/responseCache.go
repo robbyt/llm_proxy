@@ -75,7 +75,13 @@ func (c *ResponseCacheAddon) Request(f *px.Flow) {
 
 		// after setting the f.Response, other pending addons will be skipped!
 		cacheLookup.Header.Set(CacheStatusHeader, CacheStatusHit)
-		f.Response = cacheLookup.ToProxyResponse()
+		cachedResp, err := cacheLookup.ToProxyResponse(f.Request.Header.Get("Accept-Encoding"))
+		if err != nil {
+			log.Errorf("error converting cached response to ProxyResponse: %s", err)
+			return
+		}
+
+		f.Response = cachedResp
 		return
 	}
 	f.Request.Header.Set(CacheStatusHeader, CacheStatusMiss)
