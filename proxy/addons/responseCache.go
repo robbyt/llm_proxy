@@ -19,6 +19,7 @@ const (
 	CacheStatusHeader = "X-Llm_proxy-Cache"
 	CacheStatusHit    = "HIT"
 	CacheStatusMiss   = "MISS"
+	CacheStatusSkip   = "SKIP"
 )
 
 var cacheOnlyMethods = map[string]struct{}{
@@ -107,7 +108,7 @@ func (c *ResponseCacheAddon) Response(f *px.Flow) {
 		// Only cache good response codes
 		_, shouldCache := cacheOnlyResponseCodes[f.Response.StatusCode]
 		if !shouldCache {
-			f.Response.Header.Set("X-Cache", "SKIP")
+			f.Response.Header.Set(CacheStatusHeader, CacheStatusSkip)
 			log.Debugf("skipping cache storage for non-200 response: %s", f.Request.URL)
 			return
 		}
