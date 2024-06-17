@@ -1,4 +1,3 @@
-// Modified from:
 package addons
 
 import (
