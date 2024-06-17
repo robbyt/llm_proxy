@@ -48,12 +48,12 @@ func (pReq *ProxyResponse) loadHeaders(headers map[string][]string) {
 func (pRes *ProxyResponse) loadBody(body []byte, content_encoding string) error {
 	var bodyIsPrintable bool
 
-	body, err := utils.DecodeBody(body, content_encoding)
+	decodedBody, err := utils.DecodeBody(body, content_encoding)
 	if err != nil {
 		return fmt.Errorf("error decoding body: %v", err)
 	}
 
-	pRes.Body, bodyIsPrintable = utils.CanPrintFast(body)
+	pRes.Body, bodyIsPrintable = utils.CanPrintFast(decodedBody)
 	if !bodyIsPrintable {
 		return errors.New("response body is not printable")
 	}
@@ -124,20 +124,17 @@ func (pRes *ProxyResponse) ToProxyResponse(acceptEncodingHeader string) (*px.Res
 	resp := &px.Response{
 		StatusCode: pRes.Status,
 		Header:     pRes.Header,
-		// Body:       []byte(pRes.Body),
 	}
-	// encodedBody, encoding, err := utils.EncodeBody(*pRes.Body, acceptEncodingHeader)
+
+	// encode the body based on the new request's accept encoding header
 	encodedBody, encoding, err := utils.EncodeBody(&pRes.Body, acceptEncodingHeader)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding body: %v", err)
 	}
-	// Removed the cached headers for content
-	resp.Header.Del("Content-Encoding")
-	resp.Header.Del("Content-Length")
 
-	// Add the new content encoding and length
-	resp.Header.Add("Content-Encoding", encoding)
-	resp.Header.Add("Content-Length", fmt.Sprintf("%d", len(encodedBody)))
+	// set the new content encoding and length headers
+	resp.Header.Set("Content-Encoding", encoding)
+	resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(encodedBody)))
 
 	resp.Body = encodedBody
 	return resp, nil

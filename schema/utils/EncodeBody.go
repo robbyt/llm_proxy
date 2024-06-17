@@ -16,14 +16,14 @@ const (
 )
 
 // parseAcceptEncoding parses the Accept-Encoding header to find out what encodings are accepted.
-func parseAcceptEncoding(headerValue string) map[string]float64 {
+func parseAcceptEncoding(headerValue *string) map[string]float64 {
 	encodings := make(map[string]float64)
-	if headerValue == "" {
+	if *headerValue == "" {
 		// early return for empty header
 		return encodings
 	}
 
-	for _, part := range strings.Split(headerValue, ",") {
+	for _, part := range strings.Split(*headerValue, ",") {
 		pieces := strings.Split(strings.TrimSpace(part), ";q=")
 		encoding := pieces[0]
 		quality := 1.0 // default quality
@@ -41,7 +41,7 @@ func parseAcceptEncoding(headerValue string) map[string]float64 {
 
 // chooseEncoding selects the best encoding to use based on the client's Accept-Encoding header.
 // This is a simplified example that prefers gzip over deflate.
-func chooseEncoding(acceptEncodingHeader string) string {
+func chooseEncoding(acceptEncodingHeader *string) string {
 	encodings := parseAcceptEncoding(acceptEncodingHeader)
 
 	// Example logic to choose encoding
@@ -92,9 +92,9 @@ func deflateCompress(body []byte) ([]byte, string, error) {
 	return buffer.Bytes(), deflateEncoding, nil
 }
 
-// EncodeBody compresses a byte array (response body) based on the raw content encoding header
+// EncodeBody compresses a string (the response body) based on the content-encoding header
 func EncodeBody(body *string, acceptEncodingHeader string) (encodedBody []byte, encoding string, err error) {
-	selectedEncoding := chooseEncoding(acceptEncodingHeader)
+	selectedEncoding := chooseEncoding(&acceptEncodingHeader)
 	bodyBytes := []byte(*body)
 
 	switch selectedEncoding {
@@ -105,6 +105,5 @@ func EncodeBody(body *string, acceptEncodingHeader string) (encodedBody []byte, 
 	case "", identityEncoding:
 		return bodyBytes, selectedEncoding, nil
 	}
-	return nil, selectedEncoding, fmt.Errorf("unsupported encoding: %s", selectedEncoding)
-
+	return nil, "", fmt.Errorf("unsupported encoding: %s", selectedEncoding)
 }

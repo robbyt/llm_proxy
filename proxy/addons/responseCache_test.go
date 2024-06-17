@@ -1,6 +1,7 @@
 package addons
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	px "github.com/kardianos/mitmproxy/proxy"
 	"github.com/proxati/llm_proxy/schema"
+	"github.com/proxati/llm_proxy/schema/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -147,9 +149,9 @@ func TestRequest(t *testing.T) {
 			},
 			Body: []byte("resp"),
 		}
-		identifier := flow.Request.URL.String()
 
-		len, err := respCacheAddon.cache.Len(flow.Request.URL.String())
+		identifier := flow.Request.URL.String()
+		len, err := respCacheAddon.cache.Len(identifier)
 		require.Error(t, err, "error expected when checking length of non-existent bucket")
 		require.Zero(t, len, "nothing in cache yet")
 
@@ -181,7 +183,65 @@ func TestRequest(t *testing.T) {
 		assert.Equal(t, resp.StatusCode, flow.Response.StatusCode)
 		assert.Equal(t, resp.Body, flow.Response.Body)
 		assert.Equal(t, "HIT", flow.Response.Header.Get(CacheStatusHeader))
+	})
 
+	t.Run("cache hit with gzip accept-encoding", func(t *testing.T) {
+		flow := &px.Flow{
+			Request: &px.Request{
+				Method: "POST",
+				URL: &url.URL{
+					Scheme: "http",
+					Host:   "example.com",
+					Path:   "/test",
+				},
+				Header: http.Header{
+					"Host":            []string{"example.com"},
+					"Header1":         []string{"value1"},
+					"Header2":         []string{"value2"},
+					"Accept-Encoding": []string{"gzip"},
+				},
+				Body: []byte("req2"),
+			},
+		}
+		resp := &px.Response{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Content-Type":     []string{"text/plain"},
+				"Header1":          []string{"value1"},
+				"Header2":          []string{"value2"},
+				"Content-Encoding": []string{"gzip"},
+			},
+		}
+		// compress the body to simulate a real response
+		respString := "resp2"
+		encodedBody, _, err := utils.EncodeBody(&respString, "gzip")
+		require.NoError(t, err)
+		resp.Body = encodedBody
+
+		// create traffic objects for the request and response, check header loading
+		tReq, err := schema.NewProxyRequestFromMITMRequest(flow.Request, filterReqHeaders)
+		require.NoError(t, err)
+		require.Empty(t, tReq.Header.Get(CacheStatusHeader))
+		require.Empty(t, tReq.Header.Get("header1"), "header should be deleted by factory function")
+		require.NotEmpty(t, tReq.Header.Get("header2"), "header shouldn't be deleted by factory function")
+
+		tResp, err := schema.NewProxyResponseFromMITMResponse(resp, filterRespHeaders)
+		require.NoError(t, err)
+		require.Empty(t, tResp.Header.Get(CacheStatusHeader))
+		require.NotEmpty(t, tResp.Header.Get("header1"), "header should be deleted by factory function")
+		require.Empty(t, tResp.Header.Get("header2"), "header shouldn't be deleted by factory function")
+		require.Equal(t, "gzip", tResp.Header.Get("Content-Encoding"))
+
+		// store the response in cache using an internal method, to simulate the real response storage
+		respCacheAddon.cache.Put(tReq, tResp)
+
+		// simulate a new request with the same URL, should be a hit now that it's in the cache
+		require.Empty(t, resp.Header.Get(CacheStatusHeader))
+		respCacheAddon.Request(flow)
+		require.NotNil(t, flow.Response)
+		assert.Equal(t, resp.StatusCode, flow.Response.StatusCode)
+		assert.Equal(t, resp.Body, flow.Response.Body, fmt.Sprintf("expected resp.Body=%s to match flow.Response.Body=%s", string(resp.Body), string(flow.Response.Body)))
+		assert.Equal(t, "HIT", flow.Response.Header.Get(CacheStatusHeader))
 	})
 
 	t.Cleanup(func() {

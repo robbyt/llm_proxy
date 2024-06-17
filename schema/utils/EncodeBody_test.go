@@ -49,7 +49,7 @@ func TestParseAcceptEncoding(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseAcceptEncoding(tt.header)
+			result := parseAcceptEncoding(&tt.header)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -100,7 +100,7 @@ func TestChooseEncoding(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := chooseEncoding(tt.header)
+			result := chooseEncoding(&tt.header)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
