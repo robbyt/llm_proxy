@@ -45,10 +45,15 @@ func (pReq *ProxyResponse) loadHeaders(headers map[string][]string) {
 }
 
 // loadBody loads the request body into the ProxyRequest object
-func (pRes *ProxyResponse) loadBody(body []byte) error {
+func (pRes *ProxyResponse) loadBody(body []byte, content_encoding string) error {
 	var bodyIsPrintable bool
 
-	pRes.Body, bodyIsPrintable = utils.CanPrintFast(body)
+	decodedBody, err := utils.DecodeBody(body, content_encoding)
+	if err != nil {
+		return fmt.Errorf("error decoding body: %v", err)
+	}
+
+	pRes.Body, bodyIsPrintable = utils.CanPrintFast(decodedBody)
 	if !bodyIsPrintable {
 		return errors.New("response body is not printable")
 	}
@@ -113,12 +118,26 @@ func (pRes *ProxyResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (pRes *ProxyResponse) ToProxyResponse() *px.Response {
-	return &px.Response{
+// ToProxyResponse converts a ProxyResponse into a MITM proxy response object (with content encoding matching the new req)
+// Because all responses are stored as uncompressed strings, the cached response might need to be encoded before being sent
+func (pRes *ProxyResponse) ToProxyResponse(acceptEncodingHeader string) (*px.Response, error) {
+	resp := &px.Response{
 		StatusCode: pRes.Status,
 		Header:     pRes.Header,
-		Body:       []byte(pRes.Body),
 	}
+
+	// encode the body based on the new request's accept encoding header
+	encodedBody, encoding, err := utils.EncodeBody(&pRes.Body, acceptEncodingHeader)
+	if err != nil {
+		return nil, fmt.Errorf("error encoding body: %v", err)
+	}
+
+	// set the new content encoding and length headers
+	resp.Header.Set("Content-Encoding", encoding)
+	resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(encodedBody)))
+
+	resp.Body = encodedBody
+	return resp, nil
 }
 
 // NewFromMITMRequest creates a new ProxyRequest from a MITM proxy request object
@@ -133,7 +152,8 @@ func NewProxyResponseFromMITMResponse(req *px.Response, headersToFilter []string
 
 	pRes.loadHeaderFilterIndex(headersToFilter)
 	pRes.loadHeaders(req.Header)
-	if err := pRes.loadBody(req.Body); err != nil {
+
+	if err := pRes.loadBody(req.Body, req.Header.Get("Content-Encoding")); err != nil {
 		log.Warnf(err.Error())
 	}
 
