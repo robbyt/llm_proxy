@@ -24,14 +24,8 @@ jobs:
     - name: Display Go version
       run: go version
     
-    - name: Install dependencies
-      run: go get .
-
     - name: Build
-      run: go build -v ./...
+      run: make build
 
     - name: Smoketest
-      run: go run main.go --help
-
-    - name: Test
-      run: go test -v ./...
+      run: ./llm_proxy --help

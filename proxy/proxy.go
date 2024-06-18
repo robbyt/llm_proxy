@@ -13,9 +13,9 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/proxati/llm_proxy/config"
 	"github.com/proxati/llm_proxy/proxy/addons"
 	md "github.com/proxati/llm_proxy/proxy/addons/megadumper"
-	"github.com/proxati/llm_proxy/config"
 )
 
 func newCA(certDir string) (*cert.CA, error) {
@@ -181,6 +181,9 @@ func startProxy(p *px.Proxy, shutdown chan os.Signal) error {
 		}
 		// Close the http client/server connections first
 		log.Debug("Closing proxy server...")
+
+		// Manual sleep to avoid race condition on connection close
+		time.Sleep(1 * time.Second)
 
 		// Create a context that will be cancelled after N seconds
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
