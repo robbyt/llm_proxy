@@ -6,4 +6,5 @@ const (
 	SimpleMode AppMode = iota
 	DirLoggerMode
 	CacheMode
+	APIAuditMode
 )
