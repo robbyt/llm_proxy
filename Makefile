@@ -13,7 +13,7 @@ help: Makefile
 
 ## build: build a binary
 .PHONY: build
-build: test
+build: test vet
 	go build -o ./llm_proxy -v
 
 ## vet: vet code
