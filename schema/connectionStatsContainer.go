@@ -42,11 +42,14 @@ func getClientAddr(f *px.Flow) string {
 }
 
 func newConnectionStatusContainer(f *px.Flow) *ConnectionStatsContainer {
+	if f == nil {
+		return &ConnectionStatsContainer{}
+	}
 	logOutput := &ConnectionStatsContainer{
 		ClientAddress: getClientAddr(f),
 		ProxyID:       f.Id.String(),
 	}
-	if f != nil && f.Request != nil && f.Request.URL != nil {
+	if f.Request != nil && f.Request.URL != nil {
 		logOutput.URL = f.Request.URL.String()
 	}
 	return logOutput
