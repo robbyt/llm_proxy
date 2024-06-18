@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/bojanz/currency"
-	"github.com/sashabaranov/go-openai"
+	openai "github.com/sashabaranov/go-openai"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/proxati/llm_proxy/schema/providers/openai_com"
