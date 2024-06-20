@@ -2,14 +2,58 @@ package schema
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/bojanz/currency"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/proxati/llm_proxy/schema/providers/openai_com"
 )
 
+const (
+	OutputFormatFull    = "URL: {url} Model: {model} inputCost: {inputCost} outputCost {outputCost} = Request Cost: {totalReqCost} Grand Total: {grandTotal}"
+	OutputFormatCompact = "Request Cost: {totalReqCost} Grand Total: {grandTotal}"
+)
+
+// AuditOutput is a struct that holds the output data (cost totals) from a single transaction
+type AuditOutput struct {
+	URL          string `JSON:"url"`
+	Model        string `JSON:"model"`
+	InputCost    string `JSON:"inputCost"`
+	OutputCost   string `JSON:"outputCost"`
+	TotalReqCost string `JSON:"totalReqCost"`
+	GrandTotal   string `JSON:"grandTotal"`
+}
+
+func (output *AuditOutput) String() string {
+	return output.OutputStringFormatter(OutputFormatFull)
+}
+
+// OutputStringFormatter takes an AuditOutput and a format string and returns a formatted string
+func (output *AuditOutput) OutputStringFormatter(formatString string) string {
+	if formatString == "" {
+		formatString = OutputFormatFull
+	}
+
+	data := map[string]string{
+		"{url}":          output.URL,
+		"{model}":        output.Model,
+		"{inputCost}":    output.InputCost,
+		"{outputCost}":   output.OutputCost,
+		"{totalReqCost}": output.TotalReqCost,
+		"{grandTotal}":   output.GrandTotal,
+	}
+
+	for key, value := range data {
+		if value == "" {
+			continue
+		}
+		formatString = strings.Replace(formatString, key, value, -1)
+	}
+	return formatString
+}
+
+// CostCounter is a struct that holds the state of the cost counter
 type CostCounter struct {
 	grandTotal  currency.Amount
 	providers   map[string][]*API_Provider // key: provider URL, value: slice of models/products
@@ -18,9 +62,11 @@ type CostCounter struct {
 	rwMutex     sync.RWMutex
 }
 
-// NewCostCounter creates an object that _should_ be a singleton, in the Addon layer
-func NewCostCounter() *CostCounter {
-	loc := currency.NewLocale("en-US")
+// NewCostCounter creates an object that _should_ be a singleton, in the Addon layer.
+// currencyLocale is the locale for the currency formatter, e.g., "en-US"
+// formatString is the output format string, e.g., OutputFormatFull or OutputFormatShort
+func NewCostCounter(currencyLocale string) *CostCounter {
+	loc := currency.NewLocale(currencyLocale) // "en-US" is the default
 
 	cc := &CostCounter{
 		providers:   make(map[string][]*API_Provider),
@@ -40,6 +86,11 @@ func NewCostCounter() *CostCounter {
 		}
 	}
 	return cc
+}
+
+// NewCostCounterDefaults creates a new CostCounter object with reasonable defaults
+func NewCostCounterDefaults() *CostCounter {
+	return NewCostCounter("en-US")
 }
 
 func (cc *CostCounter) String() string {
@@ -80,17 +131,19 @@ func (cc *CostCounter) providerLookup(url, product string) *API_Provider {
 	return nil
 }
 
-func (cc *CostCounter) Add(req ProxyRequest, resp ProxyResponse) error {
+// Add is the primary method for working with this object, it takes a proxy req/resp
+// and calculates the cost of the transaction, returning a struct with the output data
+func (cc *CostCounter) Add(req ProxyRequest, resp ProxyResponse) (*AuditOutput, error) {
 	// parse the request
 	chatCompReq, err := openai_com.NewOpenAIChatCompletionRequest(&req.Body)
 	if err != nil || chatCompReq == nil {
-		return fmt.Errorf("failed to create OpenAI completion request: %v", err)
+		return nil, fmt.Errorf("failed to create OpenAI completion request: %v", err)
 	}
 
 	// find the provider, which is a combination of the URL and the requested model
 	provider := cc.providerLookup(req.URL.String(), chatCompReq.Model)
 	if provider == nil {
-		return fmt.Errorf("provider not found for: %s|%s", req.URL.String(), chatCompReq.Model)
+		return nil, fmt.Errorf("provider not found for: %s|%s", req.URL.String(), chatCompReq.Model)
 	}
 
 	// store the request objects
@@ -99,35 +152,40 @@ func (cc *CostCounter) Add(req ProxyRequest, resp ProxyResponse) error {
 	// parse the response object
 	chatCompResp, err := openai_com.NewOpenAIChatCompletionResponse(&resp.Body)
 	if err != nil || chatCompResp == nil {
-		return fmt.Errorf("failed to create OpenAI completion response: %v", err)
+		return nil, fmt.Errorf("failed to create OpenAI completion response: %v", err)
 	}
 
 	// store the response objects
 	provider.addResponse(&resp, chatCompResp)
 
-	// calculate the cost
+	// calculate the cost for this transaction
 	inputCost, outputCost, err := provider.calculateCost(chatCompResp)
 	if err != nil {
-		return fmt.Errorf("failed to calculate cost: %v", err)
+		return nil, fmt.Errorf("failed to calculate cost: %v", err)
 	}
 
+	// lock and update the grand total from the input/output token costs
 	cc.rwMutex.Lock()
 	defer cc.rwMutex.Unlock()
 
 	cc.grandTotal, err = cc.grandTotal.Add(inputCost)
 	if err != nil {
-		return fmt.Errorf("failed to add provider total cost to grand total: %v", err)
+		return nil, fmt.Errorf("failed to add inputCost to the grand total: %v", err)
 	}
 
 	cc.grandTotal, err = cc.grandTotal.Add(outputCost)
 	if err != nil {
-		return fmt.Errorf("failed to add provider total cost to grand total: %v", err)
+		return nil, fmt.Errorf("failed to add outputCost to the grand total: %v", err)
 	}
 	totalReqCost, _ := inputCost.Add(outputCost)
 
-	log.Infof("Request for: %s using: %s inputCost: %s outputCost %s = Request Cost: %s",
-		req.URL.String(), chatCompReq.Model, cc.formatter.Format(inputCost), cc.formatter.Format(outputCost), cc.formatter.Format(totalReqCost))
-	log.Infof("Total cost for this session: %s", cc.formatter.Format(cc.grandTotal))
-
-	return nil
+	// return the output object with the formatted cost data w/ currency symbol added
+	return &AuditOutput{
+		URL:          req.URL.String(),
+		Model:        chatCompReq.Model,
+		InputCost:    cc.formatter.Format(inputCost),
+		OutputCost:   cc.formatter.Format(outputCost),
+		TotalReqCost: cc.formatter.Format(totalReqCost),
+		GrandTotal:   cc.formatter.Format(cc.grandTotal),
+	}, nil
 }

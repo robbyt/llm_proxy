@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewCostCounter(t *testing.T) {
-	cc := NewCostCounter()
+	cc := NewCostCounterDefaults()
 	assert.NotNil(t, cc)
 	assert.NotNil(t, cc.providers)
 	assert.NotNil(t, cc.lookupCache)
@@ -30,7 +30,7 @@ func TestCostCounterString(t *testing.T) {
 }
 
 func TestProviderLookup(t *testing.T) {
-	cc := NewCostCounter()
+	cc := NewCostCounterDefaults()
 	// Assuming there's a provider with URL "http://example.com" and product "testModel" for testing
 	productURL := openai_com.API_Endpoint_Data[0]
 	model := productURL.Products[0]
@@ -57,7 +57,7 @@ func TestProviderLookup(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	cc := NewCostCounter()
+	cc := NewCostCounterDefaults()
 	// Setup: Assuming there's a provider with URL "http://example.com" and product "testModel" for testing
 	productURL := openai_com.API_Endpoint_Data[0]
 	model := productURL.Products[0]
@@ -71,8 +71,18 @@ func TestAdd(t *testing.T) {
 	resp := ProxyResponse{
 		Body: `{"choices": [{"text": "Hello!"}]}`,
 	}
-	err := cc.Add(req, resp)
+	expectedOutput := &AuditOutput{
+		URL:          productURL.URL,
+		Model:        model.Name,
+		InputCost:    "$0.00",
+		OutputCost:   "$0.00",
+		TotalReqCost: "$0.00",
+		GrandTotal:   "$0.00",
+	}
+
+	out, err := cc.Add(req, resp)
 	require.Error(t, err, "Error when invalid model is used in request")
+	require.Nil(t, out)
 	assert.Len(t, provider.apiRequests, 0)
 	assert.Len(t, provider.apiRequestBodies, 0)
 	assert.Len(t, provider.apiResponses, 0)
@@ -83,8 +93,9 @@ func TestAdd(t *testing.T) {
 		URL:  reqURL,
 		Body: fmt.Sprintf(`{"model": "%s", "prompt": "Hello, world!"}`, model.Name),
 	}
-	err = cc.Add(req, resp)
+	out, err = cc.Add(req, resp)
 	require.NoError(t, err)
+	require.Equal(t, expectedOutput, out)
 	assert.Len(t, provider.apiRequests, 1)
 	assert.Len(t, provider.apiRequestBodies, 1)
 	assert.Len(t, provider.apiResponses, 1)
