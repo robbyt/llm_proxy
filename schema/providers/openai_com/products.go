@@ -10,8 +10,10 @@ import (
 //go:embed data.json
 var pricingDataJSON embed.FS
 
-var API_Endpoint_Pricing []APIEndpoint
+// API_Endpoint_Data is populated from init() with data loaded from the embedded JSON file
+var API_Endpoint_Data []APIEndpoint
 
+// Product represents a model or other product attached to an endpoint
 type Product struct {
 	Name            string `json:"name"`
 	InputTokenCost  string `json:"inputTokenCost"`
@@ -19,6 +21,7 @@ type Product struct {
 	Currency        string `json:"currency"`
 }
 
+// APIEndpoint represents the pricing data for a single API endpoint, such as "https://api.openai.com/v1/chat/completions"
 type APIEndpoint struct {
 	URL      string    `json:"url"`
 	Products []Product `json:"products"`
@@ -29,7 +32,7 @@ func loadEmbeddedDataJSON() error {
 	if err != nil {
 		return fmt.Errorf("failed to read embedded data.json: %w", err)
 	}
-	return json.Unmarshal(data, &API_Endpoint_Pricing) // Fixed: Pass a pointer to API_Endpoint_Pricing
+	return json.Unmarshal(data, &API_Endpoint_Data) // Fixed: Pass a pointer to API_Endpoint_Pricing
 }
 
 func init() {

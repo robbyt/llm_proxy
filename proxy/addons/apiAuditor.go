@@ -1,12 +1,15 @@
 package addons
 
 import (
-	"fmt"
-
 	px "github.com/kardianos/mitmproxy/proxy"
 	"github.com/proxati/llm_proxy/schema"
 	log "github.com/sirupsen/logrus"
 )
+
+// domains supported by this auditor
+var auditURLs = map[string]interface{}{
+	"api.openai.com": nil,
+}
 
 // APIAuditorAddon log connection and flow
 type APIAuditorAddon struct {
@@ -21,6 +24,14 @@ func (aud *APIAuditorAddon) Response(f *px.Flow) {
 	}
 	go func() {
 		<-f.Done()
+
+		// only account when the request domain is supported
+		reqHostname := f.Request.URL.Hostname()
+		_, shouldAudit := auditURLs[reqHostname]
+		if !shouldAudit {
+			log.Debugf("skipping accounting for unsupported API: %s", reqHostname)
+			return
+		}
 
 		// Only account when receiving good response codes
 		_, shouldAccount := cacheOnlyResponseCodes[f.Response.StatusCode]
@@ -48,35 +59,6 @@ func (aud *APIAuditorAddon) Response(f *px.Flow) {
 		if err != nil {
 			log.Errorf("error accounting response: %s", err)
 		}
-		log.Infof("Total cost for this session: %s", aud.costCounter.String())
-	}()
-}
-
-func (addon *APIAuditorAddon) ServerConnected(connCtx *px.ConnContext) {
-	go func() {
-		log.InfoFn(func() []interface{} {
-			return []interface{}{
-				fmt.Sprintf("server connect: %v (%v->%v)",
-					connCtx.ServerConn.Address,
-					connCtx.ServerConn.Conn.LocalAddr(),
-					connCtx.ServerConn.Conn.RemoteAddr(),
-				),
-			}
-		})
-	}()
-}
-
-func (addon *APIAuditorAddon) ServerDisconnected(connCtx *px.ConnContext) {
-	go func() {
-		log.InfoFn(func() []interface{} {
-			return []interface{}{
-				fmt.Sprintf("server disconnect: %v (%v->%v)",
-					connCtx.ServerConn.Address,
-					connCtx.ServerConn.Conn.LocalAddr(),
-					connCtx.ServerConn.Conn.RemoteAddr(),
-				),
-			}
-		})
 	}()
 }
 
