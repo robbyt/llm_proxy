@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "llm-proxy-examples"
+version = "0.1.0"
+description = ""
+authors = ["Robert Terhaar <rterhaar@atlanticdynamic.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+openai = "^1.34.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.4.2"
+mypy = "^1.10.0"
+ipdb = "^0.13.13"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
