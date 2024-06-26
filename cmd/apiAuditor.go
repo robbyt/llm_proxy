@@ -28,4 +28,5 @@ All information & calculations are an approximation, and should not be used for 
 
 func init() {
 	rootCmd.AddCommand(apiAuditorCmd)
+	apiAuditorCmd.SuggestFor = api_auditor_suggestions
 }

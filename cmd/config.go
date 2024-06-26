@@ -6,6 +6,10 @@ import "github.com/proxati/llm_proxy/config"
 var cfg *config.Config = config.NewDefaultConfig()
 
 // suggestions are here instead of their respective files bc it's easier to see them all in one place
+var api_auditor_suggestions = []string{
+	"audit", "auditor", "api-auditor", "api-audit", "api-auditing",
+}
+
 var cache_suggestions = []string{
 	"cache-proxy", "caching-proxy", "cash-proxy", "cash",
 }
