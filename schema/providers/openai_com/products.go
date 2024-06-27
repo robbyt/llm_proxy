@@ -32,7 +32,7 @@ func loadEmbeddedDataJSON() error {
 	if err != nil {
 		return fmt.Errorf("failed to read embedded data.json: %w", err)
 	}
-	return json.Unmarshal(data, &API_Endpoint_Data) // Fixed: Pass a pointer to API_Endpoint_Pricing
+	return json.Unmarshal(data, &API_Endpoint_Data)
 }
 
 func init() {
