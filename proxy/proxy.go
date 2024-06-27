@@ -153,6 +153,9 @@ func configProxy(cfg *config.Config) (*px.Proxy, error) {
 
 		// add the dumper to the proxy
 		p.AddAddon(dumperAddon)
+	case config.APIAuditMode:
+		log.Debug("Enabling API Auditor addon")
+		p.AddAddon(addons.NewAPIAuditor())
 	case config.SimpleMode:
 		log.Debugf("No addons enabled for SimpleMode")
 	default:
