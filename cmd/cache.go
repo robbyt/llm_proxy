@@ -10,7 +10,7 @@ import (
 // cacheCmd represents the mock command
 var cacheCmd = &cobra.Command{
 	Use:   "cache",
-	Short: "Creates a caching server, storing and responding with previously generated responses",
+	Short: "Enable caching mode, which stores all requests / responses in a local directory",
 	Long: `This command creates a proxy server that sends responses to the upstream server only
 when there isn't a copy available in the cache. The cache command requires a local directory to store
 and retrieve the responses. This mode is useful for development and for CI, because it will reduce the
@@ -35,6 +35,12 @@ func init() {
 		cacheCmd.Flags().Int64VarP(
 			&cfg.Cache.TTL, "ttl", "", cfg.Cache.TTL,
 			"Time to live for cache files in seconds (0 means cache forever)",
+		)
+	*/
+	/*
+		cacheCmd.Flags().Int64Var(
+			&cfg.Cache.TTL, "max", cfg.Cache.MaxRecords,
+			"Limit # of cached records. LRU deletion. 0=no limit. ",
 		)
 	*/
 	cacheCmd.Flags().StringSliceVarP(
