@@ -13,9 +13,9 @@ var rootCmd = &cobra.Command{
 	Long: `llm_proxy is an HTTP MITM (Man-In-The-Middle) proxy designed to log all requests and responses.
 
 This is useful for:
-  * Security: The proxy daemon can operate in a DMZ to facilitate communication between isolated applications and external LLM API providers.
-  * Debugging: It allows tracking all LLM API traffic, to enable later review if an application yields unexpected results.
-  * Fine-tuning: By saving all requests and responses, this proxy allows the collection of fine-tuning data, which can be used to enhance LLM performance and accuracy.
+  * Security: A multi-homed DMZ provides isolation between apps and external LLM APIs.
+  * Debugging: Tag and observe all LLM API traffic.
+  * Fine-tuning: Use the stored logs to fine-tune your LLM models.
 `,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		cfg.SetLoggerLevel()
@@ -36,7 +36,9 @@ func init() {
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true // don't show the default completion command in help
 	rootCmd.PersistentFlags().BoolVarP(&cfg.Verbose, "verbose", "v", cfg.Verbose, "Print runtime activity to stderr")
 	rootCmd.PersistentFlags().BoolVarP(&cfg.Debug, "debug", "d", cfg.Debug, "Print debug information to stderr")
-	rootCmd.PersistentFlags().BoolVarP(&cfg.Trace, "trace", "", cfg.Trace, "Print detailed trace debugging information to stderr, requires --debug to also be set")
+	rootCmd.PersistentFlags().BoolVar(
+		&cfg.Trace, "trace", cfg.Trace, "Print detailed trace debugging information to stderr, requires --debug to also be set")
+	rootCmd.PersistentFlags().MarkHidden("trace")
 
 	rootCmd.Flags().StringVarP(
 		&cfg.Listen, "listen", "l", cfg.Listen,
@@ -52,6 +54,6 @@ func init() {
 	)
 	rootCmd.Flags().BoolVarP(
 		&cfg.NoHttpUpgrader, "no-http-upgrader", "", cfg.NoHttpUpgrader,
-		"Disable the http->https upgrader. If set, the proxy will not upgrade http requests to https.",
+		"Disable the automatic http->https request upgrader",
 	)
 }
