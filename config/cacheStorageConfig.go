@@ -100,7 +100,7 @@ func NewCacheStorageConfig(cacheDir string) (*CacheStorageConfig, error) {
 		return iFile, nil
 	}
 
-	log.Debugf("Creating a new cache config file at: %s", iFile.filePath)
+	log.Infof("Creating a new cache config file at: %s", iFile.filePath)
 	err := iFile.Save()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config file: %s", err)
