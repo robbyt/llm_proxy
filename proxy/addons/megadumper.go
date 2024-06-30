@@ -9,10 +9,10 @@ import (
 	px "github.com/kardianos/mitmproxy/proxy"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/proxati/llm_proxy/config"
 	md "github.com/proxati/llm_proxy/proxy/addons/megadumper"
 	"github.com/proxati/llm_proxy/proxy/addons/megadumper/formatters"
 	"github.com/proxati/llm_proxy/proxy/addons/megadumper/writers"
-	"github.com/proxati/llm_proxy/config"
 	"github.com/proxati/llm_proxy/schema"
 )
 

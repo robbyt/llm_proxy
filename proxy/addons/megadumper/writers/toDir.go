@@ -1,8 +1,8 @@
 package writers
 
 import (
-	md "github.com/proxati/llm_proxy/proxy/addons/megadumper"
 	"github.com/proxati/llm_proxy/fileUtils"
+	md "github.com/proxati/llm_proxy/proxy/addons/megadumper"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,7 +20,7 @@ func (t *ToDir) Write(identifier string, bytes []byte) (int, error) {
 		return 0, err
 	}
 	defer fileObj.Close()
-	log.Debugf("Writing to file: %v", fileName)
+	log.Infof("Writing to file: %v", fileName)
 	return fileObj.Write(bytes)
 }
 

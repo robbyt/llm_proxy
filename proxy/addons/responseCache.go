@@ -162,7 +162,6 @@ func (d *ResponseCacheAddon) String() string {
 
 func (d *ResponseCacheAddon) Close() (err error) {
 	d.closeOnce.Do(func() {
-		log.Debug("Shutting down ResponseCacheAddon...")
 		err = d.cache.Close()
 	})
 	return
