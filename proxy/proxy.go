@@ -16,6 +16,7 @@ import (
 	"github.com/proxati/llm_proxy/config"
 	"github.com/proxati/llm_proxy/proxy/addons"
 	md "github.com/proxati/llm_proxy/proxy/addons/megadumper"
+	"github.com/proxati/llm_proxy/version"
 )
 
 func newCA(certDir string) (*cert.CA, error) {
@@ -206,6 +207,8 @@ func startProxy(p *px.Proxy, shutdown chan os.Signal) error {
 
 // Run is the main entry point for the proxy, configures the proxy and runs it
 func Run(cfg *config.Config) error {
+	log.Debugf("Starting LLM_Proxy version: %s", version.String())
+
 	// setup background signal handler for clean shutdown
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
